@@ -1,24 +1,29 @@
 const API_URL = "https://g.tenor.com/v1/";
 const API_KEY = "LIVDSRZULELA";
+const LIMIT = "limit=12";
+const LOCALE = "locale=cs_CZ";
 
 const getTrendingGifs = (offset) => {
-  if (offset) {
-    return fetch(
-      `${API_URL}trending?key=${API_KEY}&locale=cz_CS&limit=12&pos=${offset}`
-    );
-  }
-  return fetch(`${API_URL}trending?key=${API_KEY}&locale=cz_CS&limit=12`);
+  let URL = `${API_URL}trending?key=${API_KEY}&${LOCALE}&${LIMIT}`;
+  if (offset) URL += "&pos=" + offset;
+  return fetch(URL);
 };
 
 const searchGifs = (value, offset) => {
-  if (offset) {
-    return fetch(
-      `${API_URL}search?key=${API_KEY}&q=${value}&locale=cz_CS&limit=12&pos=${offset}`
-    );
-  }
-  return fetch(
-    `${API_URL}search?key=${API_KEY}&q=${value}&locale=cz_CS&limit=12`
-  );
+  let URL = `${API_URL}search?key=${API_KEY}&q=${value}&${LOCALE}&${LIMIT}`;
+  if (offset) URL += "&pos=" + offset;
+  return fetch(URL);
 };
 
-export { getTrendingGifs, searchGifs };
+const getApiData = async ({ value, name, offset }) => {
+  switch (name) {
+    case "trends":
+      return await getTrendingGifs(offset);
+    case "search":
+      return await searchGifs(value, offset);
+    default:
+      return null;
+  }
+};
+
+export { getApiData };

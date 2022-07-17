@@ -2,7 +2,7 @@
   <p v-if="loading" class="loading">Loading...</p>
   <section v-else class="gif-list" ref="gifList">
     <div v-for="(gif, i) in gifs" :key="i">
-      <Gif v-if="i === gifs.length - 1" :gif="gif" :observer="observer" />
+      <Gif v-if="isLastChild(i)" :gif="gif" :observer="observer" />
       <Gif v-else :gif="gif" />
     </div>
     <p v-if="error" ref="error">No such GIFs found...</p>
@@ -32,6 +32,9 @@ export default {
     }),
   },
   methods: {
+    isLastChild(index) {
+      return index === this.gifs.length - 1;
+    },
     onElementObserved(entries) {
       entries.forEach(({ target, isIntersecting }) => {
         if (!isIntersecting) {

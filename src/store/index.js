@@ -1,5 +1,5 @@
 import { createStore } from "vuex";
-import { getTrendingGifs, searchGifs } from "../services/api";
+import { getApiData } from "../services/api";
 
 const store = createStore({
   state() {
@@ -41,13 +41,8 @@ const store = createStore({
         const offset = state.offset;
         if (!offset) commit("setLoading", true);
 
-        let fetchResponse;
-        if (name.includes("trends")) {
-          fetchResponse = await getTrendingGifs(offset);
-        } else if (name.includes("search")) {
-          fetchResponse = await searchGifs(value, offset);
-        }
-        const data = await fetchResponse.json();
+        const fetchResponse = await getApiData({ value, name, offset });
+        const data = await fetchResponse?.json();
 
         commit("setOffset", data?.next);
         let gifs = data?.results;
