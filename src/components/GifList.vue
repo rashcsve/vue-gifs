@@ -1,5 +1,5 @@
 <template>
-  <div v-if="loading">Loading...</div>
+  <p v-if="loading" class="loading">Loading...</p>
   <section v-else class="gif-list" ref="gifList">
     <div v-for="gif in gifs" :key="gif.id">
       <Gif :gif="gif" :observer="observer" />
@@ -18,3 +18,22 @@ export default {
   },
 };
 </script>
+<style scoped>
+.gif-list {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.loading {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+@media screen and (min-width: 756px) {
+  .gif-list {
+    justify-content: space-between;
+  }
+}
+</style>

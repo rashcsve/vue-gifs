@@ -13,8 +13,8 @@ export default {
 
 <style scoped>
 .gif {
-  width: 250px;
-  height: 250px;
+  width: 200px;
+  height: 200px;
   margin-bottom: 20px;
   display: flex;
   justify-content: center;
@@ -22,5 +22,12 @@ export default {
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
+}
+
+@media screen and (min-width: 756px) {
+  .gif {
+    width: 250px;
+    height: 250px;
+  }
 }
 </style>

@@ -1,5 +1,5 @@
 import { createStore } from "vuex";
-import { getTrendingGifs } from "../services/api";
+import { getTrendingGifs, searchGifs } from "../services/api";
 
 const store = createStore({
   state() {
@@ -36,6 +36,21 @@ const store = createStore({
         const fetchResponse = await getTrendingGifs(state.offset);
         const data = await fetchResponse.json();
         commit("setOffset", data?.next);
+        commit("setGifs", data?.results);
+        commit("setError", false);
+        commit("setLoading", false);
+      } catch (e) {
+        commit("setError", true);
+        commit("setLoading", false);
+        commit("setOffset", null);
+      }
+    },
+    async searchGifs({ commit }, value) {
+      try {
+        commit("setLoading", true);
+        const fetchResponse = await searchGifs(value);
+        const data = await fetchResponse.json();
+        commit("setOffset", null);
         commit("setGifs", data?.results);
         commit("setError", false);
         commit("setLoading", false);

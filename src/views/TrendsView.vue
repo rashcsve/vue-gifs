@@ -17,18 +17,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-.gif-list {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-@media screen and (min-width: 1024px) {
-  .gif-list {
-    justify-content: space-between;
-  }
-}
-</style>
