@@ -4,6 +4,7 @@
     <div v-for="gif in gifs" :key="gif.id">
       <Gif :gif="gif" :observer="observer" />
     </div>
+    <p v-if="error">No such GIFs found...</p>
   </section>
 </template>
 
@@ -14,7 +15,11 @@ import Gif from "../components/GifItem.vue";
 export default {
   components: { Gif },
   computed: {
-    ...mapGetters({ gifs: "getGifs", loading: "getLoading" }),
+    ...mapGetters({
+      gifs: "getGifs",
+      loading: "getLoading",
+      error: "getError",
+    }),
   },
 };
 </script>

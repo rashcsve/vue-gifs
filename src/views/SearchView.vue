@@ -41,4 +41,9 @@ export default {
   display: flex;
   justify-content: center;
 }
+@media (min-width: 1024px) {
+  .input-wrapper {
+    justify-content: flex-start;
+  }
+}
 </style>

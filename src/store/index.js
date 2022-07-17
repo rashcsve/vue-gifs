@@ -36,8 +36,12 @@ const store = createStore({
         const fetchResponse = await getTrendingGifs(state.offset);
         const data = await fetchResponse.json();
         commit("setOffset", data?.next);
-        commit("setGifs", data?.results);
-        commit("setError", false);
+        if (data?.results?.length > 0) {
+          commit("setGifs", data?.results);
+          commit("setError", false);
+        } else {
+          commit("setError", true);
+        }
         commit("setLoading", false);
       } catch (e) {
         commit("setError", true);
@@ -51,8 +55,12 @@ const store = createStore({
         const fetchResponse = await searchGifs(value);
         const data = await fetchResponse.json();
         commit("setOffset", null);
-        commit("setGifs", data?.results);
-        commit("setError", false);
+        if (data?.results?.length > 0) {
+          commit("setGifs", data?.results);
+          commit("setError", false);
+        } else {
+          commit("setError", true);
+        }
         commit("setLoading", false);
       } catch (e) {
         commit("setError", true);
