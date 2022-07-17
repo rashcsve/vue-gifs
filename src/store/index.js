@@ -28,37 +28,36 @@ const store = createStore({
     setOffset(state, value) {
       state.offset = value;
     },
+    resetGifs(state) {
+      state.offset = null;
+      state.error = null;
+      state.loading = false;
+      state.gifs = [];
+    },
   },
   actions: {
-    async getTrendingGifsFromAPI({ commit, state }) {
+    async getGifsFromAPI({ commit, state }, { value, name }) {
       try {
-        commit("setLoading", true);
-        const fetchResponse = await getTrendingGifs(state.offset);
-        const data = await fetchResponse.json();
-        commit("setOffset", data?.next);
-        if (data?.results?.length > 0) {
-          commit("setGifs", data?.results);
-          commit("setError", false);
-        } else {
-          commit("setError", true);
+        const offset = state.offset;
+        if (!offset) commit("setLoading", true);
+
+        let fetchResponse;
+        if (name.includes("trends")) {
+          fetchResponse = await getTrendingGifs(offset);
+        } else if (name.includes("search")) {
+          fetchResponse = await searchGifs(value, offset);
         }
-        commit("setLoading", false);
-      } catch (e) {
-        commit("setError", true);
-        commit("setLoading", false);
-        commit("setOffset", null);
-      }
-    },
-    async searchGifs({ commit }, value) {
-      try {
-        commit("setLoading", true);
-        const fetchResponse = await searchGifs(value);
         const data = await fetchResponse.json();
-        commit("setOffset", null);
-        if (data?.results?.length > 0) {
-          commit("setGifs", data?.results);
+
+        commit("setOffset", data?.next);
+        let gifs = data?.results;
+        if (offset) gifs = [...state.gifs, ...gifs];
+
+        if (gifs?.length > 0) {
+          commit("setGifs", gifs);
           commit("setError", false);
         } else {
+          commit("setGifs", []);
           commit("setError", true);
         }
         commit("setLoading", false);

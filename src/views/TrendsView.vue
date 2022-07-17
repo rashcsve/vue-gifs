@@ -1,19 +1,24 @@
 <template>
   <h1>Trending GIFs</h1>
-  <GifList />
+  <GifList @getGifs="getGifs" />
 </template>
 
 <script>
-import { mapActions } from "vuex";
+import { mapActions, mapMutations } from "vuex";
 import GifList from "../components/GifList.vue";
 
 export default {
   components: { GifList },
   async created() {
+    this.resetGifs();
     await this.getGifs();
   },
   methods: {
-    ...mapActions({ getGifs: "getTrendingGifsFromAPI" }),
+    ...mapMutations(["resetGifs"]),
+    ...mapActions(["getGifsFromAPI"]),
+    async getGifs() {
+      await this.getGifsFromAPI({ name: "trends" });
+    },
   },
 };
 </script>

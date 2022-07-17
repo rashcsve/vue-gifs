@@ -8,7 +8,7 @@
       @input="onSearch"
     />
   </div>
-  <GifList />
+  <GifList @getGifs="search" />
 </template>
 
 <script>
@@ -21,16 +21,19 @@ export default {
     return { searchValue: "", timeout: null };
   },
   async created() {
-    this.setGifs([]);
+    this.resetGifs();
   },
   methods: {
-    ...mapMutations(["setGifs"]),
-    ...mapActions({ searchGifs: "searchGifs" }),
+    ...mapMutations(["resetGifs"]),
+    ...mapActions(["getGifsFromAPI"]),
     onSearch() {
       clearTimeout(this.timeout);
       this.timeout = setTimeout(() => {
-        this.searchGifs(this.searchValue);
+        this.search();
       }, 200);
+    },
+    search() {
+      this.getGifsFromAPI({ name: "search", value: this.searchValue });
     },
   },
 };

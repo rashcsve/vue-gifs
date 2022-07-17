@@ -1,10 +1,11 @@
 <template>
   <p v-if="loading" class="loading">Loading...</p>
   <section v-else class="gif-list" ref="gifList">
-    <div v-for="gif in gifs" :key="gif.id">
-      <Gif :gif="gif" :observer="observer" />
+    <div v-for="(gif, i) in gifs" :key="i">
+      <Gif v-if="i === gifs.length - 1" :gif="gif" :observer="observer" />
+      <Gif v-else :gif="gif" />
     </div>
-    <p v-if="error">No such GIFs found...</p>
+    <p v-if="error" ref="error">No such GIFs found...</p>
   </section>
 </template>
 
@@ -14,6 +15,15 @@ import Gif from "../components/GifItem.vue";
 
 export default {
   components: { Gif },
+  data() {
+    return { observer: null };
+  },
+  created() {
+    this.observer = new IntersectionObserver(this.onElementObserved, {
+      root: this.$el,
+      threshold: 1.0,
+    });
+  },
   computed: {
     ...mapGetters({
       gifs: "getGifs",
@@ -21,11 +31,25 @@ export default {
       error: "getError",
     }),
   },
+  methods: {
+    onElementObserved(entries) {
+      entries.forEach(({ target, isIntersecting }) => {
+        if (!isIntersecting) {
+          return;
+        }
+        this.observer.unobserve(target);
+        this.$emit("getGifs");
+      });
+    },
+  },
+  beforeUnmount() {
+    this.observer.disconnect();
+  },
 };
 </script>
 <style scoped>
 .gif-list {
-  margin-top: 20px;
+  margin-top: 1rem;
   display: flex;
   justify-content: center;
   flex-wrap: wrap;

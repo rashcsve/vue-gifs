@@ -7,7 +7,10 @@
 
 <script>
 export default {
-  props: ["gif"],
+  props: ["gif", "observer"],
+  mounted() {
+    if (this.observer) this.observer.observe(this.$el);
+  },
 };
 </script>
 
@@ -15,7 +18,7 @@ export default {
 .gif {
   width: 200px;
   height: 200px;
-  margin-bottom: 20px;
+  margin-bottom: 0.5rem;
   display: flex;
   justify-content: center;
   align-items: flex-end;
