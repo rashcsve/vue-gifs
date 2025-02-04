@@ -1,18 +1,21 @@
+<script setup>
+import { ref, onMounted } from "vue";
+const props = defineProps(["gif", "observer"]);
+
+const root = ref(null);
+
+onMounted(() => {
+  if (props.observer) props.observer.observe(root.value);
+});
+</script>
+
 <template>
   <div
+    ref="root"
     class="gif"
     :style="`background-image: url('${gif.media[0].gif.url}')`"
   ></div>
 </template>
-
-<script>
-export default {
-  props: ["gif", "observer"],
-  mounted() {
-    if (this.observer) this.observer.observe(this.$el);
-  },
-};
-</script>
 
 <style scoped>
 .gif {

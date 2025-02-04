@@ -1,68 +1,63 @@
-import { createStore } from "vuex";
+import { defineStore } from "pinia";
 import { getApiData } from "../services/api";
 
-const store = createStore({
-  state() {
-    return {
-      gifs: [],
-      loading: false,
-      error: false,
-      offset: null,
-    };
-  },
+export const useGifsStore = defineStore("gifStore", {
+  state: () => ({
+    gifs: [],
+    loading: false,
+    error: false,
+    offset: null,
+  }),
   getters: {
     getError: (state) => state.error,
     getLoading: (state) => state.loading,
     getGifs: (state) => state.gifs,
   },
-  mutations: {
-    setGifs(state, data) {
-      state.gifs = data;
-    },
-    setLoading(state, value) {
-      state.loading = value;
-    },
-    setError(state, value) {
-      state.error = value;
-    },
-    setOffset(state, value) {
-      state.offset = value;
-    },
-    resetGifs(state) {
-      state.offset = null;
-      state.error = null;
-      state.loading = false;
-      state.gifs = [];
-    },
-  },
   actions: {
-    async getGifsFromAPI({ commit, state }, { value, name }) {
+    setGifs(data) {
+      this.gifs = data;
+    },
+    setLoading(value) {
+      this.loading = value;
+    },
+    setError(value) {
+      this.error = value;
+    },
+    setOffset(value) {
+      this.offset = value;
+    },
+    resetGifs() {
+      this.offset = null;
+      this.error = null;
+      this.loading = false;
+      this.gifs = [];
+    },
+    async getGifsFromAPI({ value, name }) {
       try {
-        const offset = state.offset;
-        if (!offset) commit("setLoading", true);
+        const offset = this.offset;
+        if (!offset) this.setLoading(true);
 
         const fetchResponse = await getApiData({ value, name, offset });
         const data = await fetchResponse?.json();
 
-        commit("setOffset", data?.next);
+        this.setOffset(data?.next);
+
         let gifs = data?.results;
-        if (offset) gifs = [...state.gifs, ...gifs];
+        if (offset) gifs = [...this.gifs, ...gifs];
 
         if (gifs?.length > 0) {
-          commit("setGifs", gifs);
-          commit("setError", false);
+          this.setGifs(gifs);
+          this.setError(false);
         } else {
-          commit("setGifs", []);
-          commit("setError", true);
+          this.setGifs([]);
+          this.setError(true);
         }
-        commit("setLoading", false);
+        this.setLoading(false);
       } catch (e) {
-        commit("setError", true);
-        commit("setLoading", false);
-        commit("setOffset", null);
+        this.setError(true);
+        this.setLoading(false);
+        this.setOffset(null);
       }
     },
   },
 });
-
-export default store;

@@ -1,3 +1,29 @@
+<script setup>
+import { ref } from "vue";
+
+import { useGifsStore } from "@/store/index";
+import GifList from "@/components/GifList.vue";
+const gifStore = useGifsStore();
+
+gifStore.resetGifs();
+
+const searchValue = ref("");
+const timeout = ref(null);
+
+function onSearch() {
+  console.log("here");
+  clearTimeout(timeout.value);
+  gifStore.setOffset(null);
+  timeout.value = setTimeout(() => {
+    search();
+  }, 1000);
+}
+
+async function search() {
+  await gifStore.getGifsFromAPI({ name: "search", value: searchValue.value });
+}
+</script>
+
 <template>
   <h1>Search GIFs</h1>
   <div class="input-wrapper">
@@ -11,33 +37,6 @@
   <GifList @getGifs="search" />
 </template>
 
-<script>
-import { mapActions, mapMutations } from "vuex";
-import GifList from "../components/GifList.vue";
-
-export default {
-  components: { GifList },
-  data() {
-    return { searchValue: "", timeout: null };
-  },
-  async created() {
-    this.resetGifs();
-  },
-  methods: {
-    ...mapMutations(["resetGifs"]),
-    ...mapActions(["getGifsFromAPI"]),
-    onSearch() {
-      clearTimeout(this.timeout);
-      this.timeout = setTimeout(() => {
-        this.search();
-      }, 200);
-    },
-    search() {
-      this.getGifsFromAPI({ name: "search", value: this.searchValue });
-    },
-  },
-};
-</script>
 <style scoped>
 .input-wrapper {
   margin-top: 1rem;
