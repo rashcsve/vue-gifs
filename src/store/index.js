@@ -1,63 +1,66 @@
 import { defineStore } from "pinia";
-import { getApiData } from "../services/api";
+import { ref } from "vue";
 
-export const useGifsStore = defineStore("gifStore", {
-  state: () => ({
-    gifs: [],
-    loading: false,
-    error: false,
-    offset: null,
-  }),
-  getters: {
-    getError: (state) => state.error,
-    getLoading: (state) => state.loading,
-    getGifs: (state) => state.gifs,
-  },
-  actions: {
-    setGifs(data) {
-      this.gifs = data;
-    },
-    setLoading(value) {
-      this.loading = value;
-    },
-    setError(value) {
-      this.error = value;
-    },
-    setOffset(value) {
-      this.offset = value;
-    },
-    resetGifs() {
-      this.offset = null;
-      this.error = null;
-      this.loading = false;
-      this.gifs = [];
-    },
-    async getGifsFromAPI({ value, name }) {
-      try {
-        const offset = this.offset;
-        if (!offset) this.setLoading(true);
+import { fetchGifsFromApi } from "@/services/api";
 
-        const fetchResponse = await getApiData({ value, name, offset });
-        const data = await fetchResponse?.json();
+export const useGifsStore = defineStore("gifStore", () => {
+  const gifs = ref([]);
+  const isLoading = ref(false);
+  const hasError = ref(false);
+  const _offset = ref(null);
 
-        this.setOffset(data?.next);
+  function $reset() {
+    _offset.value = null;
+    hasError.value = false;
+    isLoading.value = false;
+    gifs.value = [];
+  }
 
-        let gifs = data?.results;
-        if (offset) gifs = [...this.gifs, ...gifs];
+  function _setGifs(data) {
+    gifs.value = data;
+  }
 
-        if (gifs?.length > 0) {
-          this.setGifs(gifs);
-          this.setError(false);
-        } else {
-          this.setGifs([]);
-          this.setError(true);
-        }
-        this.setLoading(false);
-      } catch (e) {
-        this.setError(true);
-        this.setLoading(false);
-        this.setOffset(null);
-      }
-    },
-  },
+  function _setLoadingStatus(value) {
+    isLoading.value = Boolean(value);
+  }
+
+  function _setErrorStatus(value) {
+    hasError.value = Boolean(value);
+  }
+
+  function setOffset(value) {
+    _offset.value = value;
+  }
+
+  async function fetchGifs({ query, category }) {
+    try {
+      if (!_offset.value) _setLoadingStatus(true);
+
+      const data = await fetchGifsFromApi({
+        query,
+        category,
+        offset: _offset.value,
+      });
+
+      if (!data) throw new Error("Failed to fetch data");
+
+      setOffset(data.next);
+
+      const result = data.results
+        ? _offset.value
+          ? [...gifs.value, ...data.results]
+          : data.results
+        : [];
+
+      _setGifs(result);
+      _setErrorStatus(result.length === 0);
+    } catch (e) {
+      _setErrorStatus(true);
+      setOffset(null);
+    } finally {
+      _setLoadingStatus(false);
+    }
+  }
+
+  return { gifs, isLoading, hasError, $reset, setOffset, fetchGifs };
 });

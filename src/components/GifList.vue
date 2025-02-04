@@ -3,7 +3,7 @@ import { ref, computed, onBeforeUnmount } from "vue";
 import Gif from "@/components/GifItem.vue";
 import { useGifsStore } from "@/store/index";
 
-const emit = defineEmits(["getGifs"]);
+const emit = defineEmits(["fetchGifs"]);
 const gifStore = useGifsStore();
 
 const observer = ref(null);
@@ -11,13 +11,13 @@ observer.value = new IntersectionObserver(onElementObserved, {
   threshold: 1.0,
 });
 
-const gifs = computed(() => gifStore.getGifs);
-const loading = computed(() => gifStore.getLoading);
-const error = computed(() => gifStore.getError);
+const gifList = computed(() => gifStore.gifs);
+const isLoading = computed(() => gifStore.isLoading);
+const hasError = computed(() => gifStore.hasError);
 
-function isLastChild(index) {
-  return index === this.gifs.length - 1;
-}
+const isLastItem = (index) => {
+  return index === gifList.value.length - 1;
+};
 
 function onElementObserved(entries) {
   entries.forEach(({ target, isIntersecting }) => {
@@ -25,20 +25,20 @@ function onElementObserved(entries) {
       return;
     }
     observer.value.unobserve(target);
-    emit("getGifs");
+    emit("fetchGifs");
   });
 }
+
 onBeforeUnmount(() => observer.value.disconnect());
 </script>
 
 <template>
-  <p v-if="loading" class="loading">Loading...</p>
+  <p v-if="isLoading" class="loading">Loading...</p>
   <section v-else class="gif-list" ref="gifList">
-    <div v-for="(gif, i) in gifs" :key="i">
-      <Gif v-if="isLastChild(i)" :gif="gif" :observer="observer" />
-      <Gif v-else :gif="gif" />
+    <div v-for="(gif, index) in gifList" :key="index">
+      <Gif :gif="gif" :observer="isLastItem(index) ? observer : null" />
     </div>
-    <p v-if="error" ref="error">No such GIFs found...</p>
+    <p v-if="hasError" ref="error">No such GIFs found...</p>
   </section>
 </template>
 

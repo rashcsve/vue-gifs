@@ -1,17 +1,18 @@
 <script setup>
 import { useGifsStore } from "@/store/index";
-import GifList from "../components/GifList.vue";
+import GifList from "@/components/GifList.vue";
+
 const gifStore = useGifsStore();
 
-gifStore.resetGifs();
-getGifs();
+gifStore.$reset();
+fetchTrendingGifs();
 
-async function getGifs() {
-  await gifStore.getGifsFromAPI({ name: "trends" });
+async function fetchTrendingGifs() {
+  await gifStore.fetchGifs({ category: "trends" });
 }
 </script>
 
 <template>
   <h1>Trending GIFs</h1>
-  <GifList @getGifs="getGifs" />
+  <GifList @fetchGifs="fetchTrendingGifs" />
 </template>

@@ -1,27 +1,23 @@
 <script setup>
 import { ref } from "vue";
-
 import { useGifsStore } from "@/store/index";
 import GifList from "@/components/GifList.vue";
+
 const gifStore = useGifsStore();
+gifStore.$reset();
 
-gifStore.resetGifs();
-
-const searchValue = ref("");
+const searchQuery = ref("");
 const timeout = ref(null);
 
-function onSearch() {
-  console.log("here");
+const handleSearchInput = () => {
   clearTimeout(timeout.value);
   gifStore.setOffset(null);
-  timeout.value = setTimeout(() => {
-    search();
-  }, 1000);
-}
+  timeout.value = setTimeout(fetchGifs, 1000);
+};
 
-async function search() {
-  await gifStore.getGifsFromAPI({ name: "search", value: searchValue.value });
-}
+const fetchGifs = async () => {
+  await gifStore.fetchGifs({ query: searchQuery.value, category: "search" });
+};
 </script>
 
 <template>
@@ -30,11 +26,11 @@ async function search() {
     <input
       type="text"
       placeholder="Search gifs.."
-      v-model="searchValue"
-      @input="onSearch"
+      v-model="searchQuery"
+      @input="handleSearchInput"
     />
   </div>
-  <GifList @getGifs="search" />
+  <GifList @fetchGifs="fetchGifs" />
 </template>
 
 <style scoped>
