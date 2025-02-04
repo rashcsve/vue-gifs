@@ -1,55 +1,47 @@
+<script setup>
+import { ref, computed, onBeforeUnmount } from "vue";
+import Gif from "@/components/GifItem.vue";
+import { useGifsStore } from "@/store/index";
+
+const emit = defineEmits(["fetchGifs"]);
+const gifStore = useGifsStore();
+
+const observer = ref(null);
+observer.value = new IntersectionObserver(onElementObserved, {
+  threshold: 1.0,
+});
+
+const gifList = computed(() => gifStore.gifs);
+const isLoading = computed(() => gifStore.isLoading);
+const hasError = computed(() => gifStore.hasError);
+
+const isLastItem = (index) => {
+  return index === gifList.value.length - 1;
+};
+
+function onElementObserved(entries) {
+  entries.forEach(({ target, isIntersecting }) => {
+    if (!isIntersecting) {
+      return;
+    }
+    observer.value.unobserve(target);
+    emit("fetchGifs");
+  });
+}
+
+onBeforeUnmount(() => observer.value.disconnect());
+</script>
+
 <template>
-  <p v-if="loading" class="loading">Loading...</p>
+  <p v-if="isLoading" class="loading">Loading...</p>
   <section v-else class="gif-list" ref="gifList">
-    <div v-for="(gif, i) in gifs" :key="i">
-      <Gif v-if="isLastChild(i)" :gif="gif" :observer="observer" />
-      <Gif v-else :gif="gif" />
+    <div v-for="(gif, index) in gifList" :key="index">
+      <Gif :gif="gif" :observer="isLastItem(index) ? observer : null" />
     </div>
-    <p v-if="error" ref="error">No such GIFs found...</p>
+    <p v-if="hasError" ref="error">No such GIFs found...</p>
   </section>
 </template>
 
-<script>
-import { mapGetters } from "vuex";
-import Gif from "../components/GifItem.vue";
-
-export default {
-  components: { Gif },
-  data() {
-    return { observer: null };
-  },
-  created() {
-    this.observer = new IntersectionObserver(this.onElementObserved, {
-      root: this.$el,
-      threshold: 1.0,
-    });
-  },
-  computed: {
-    ...mapGetters({
-      gifs: "getGifs",
-      loading: "getLoading",
-      error: "getError",
-    }),
-  },
-  methods: {
-    isLastChild(index) {
-      return index === this.gifs.length - 1;
-    },
-    onElementObserved(entries) {
-      entries.forEach(({ target, isIntersecting }) => {
-        if (!isIntersecting) {
-          return;
-        }
-        this.observer.unobserve(target);
-        this.$emit("getGifs");
-      });
-    },
-  },
-  beforeUnmount() {
-    this.observer.disconnect();
-  },
-};
-</script>
 <style scoped>
 .gif-list {
   margin-top: 1rem;

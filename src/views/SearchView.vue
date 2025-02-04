@@ -1,43 +1,38 @@
+<script setup>
+import { ref } from "vue";
+import { useGifsStore } from "@/store/index";
+import GifList from "@/components/GifList.vue";
+
+const gifStore = useGifsStore();
+gifStore.$reset();
+
+const searchQuery = ref("");
+const timeout = ref(null);
+
+const handleSearchInput = () => {
+  clearTimeout(timeout.value);
+  gifStore.setOffset(null);
+  timeout.value = setTimeout(fetchGifs, 1000);
+};
+
+const fetchGifs = async () => {
+  await gifStore.fetchGifs({ query: searchQuery.value, category: "search" });
+};
+</script>
+
 <template>
   <h1>Search GIFs</h1>
   <div class="input-wrapper">
     <input
       type="text"
       placeholder="Search gifs.."
-      v-model="searchValue"
-      @input="onSearch"
+      v-model="searchQuery"
+      @input="handleSearchInput"
     />
   </div>
-  <GifList @getGifs="search" />
+  <GifList @fetchGifs="fetchGifs" />
 </template>
 
-<script>
-import { mapActions, mapMutations } from "vuex";
-import GifList from "../components/GifList.vue";
-
-export default {
-  components: { GifList },
-  data() {
-    return { searchValue: "", timeout: null };
-  },
-  async created() {
-    this.resetGifs();
-  },
-  methods: {
-    ...mapMutations(["resetGifs"]),
-    ...mapActions(["getGifsFromAPI"]),
-    onSearch() {
-      clearTimeout(this.timeout);
-      this.timeout = setTimeout(() => {
-        this.search();
-      }, 200);
-    },
-    search() {
-      this.getGifsFromAPI({ name: "search", value: this.searchValue });
-    },
-  },
-};
-</script>
 <style scoped>
 .input-wrapper {
   margin-top: 1rem;

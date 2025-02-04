@@ -1,68 +1,66 @@
-import { createStore } from "vuex";
-import { getApiData } from "../services/api";
+import { defineStore } from "pinia";
+import { ref } from "vue";
 
-const store = createStore({
-  state() {
-    return {
-      gifs: [],
-      loading: false,
-      error: false,
-      offset: null,
-    };
-  },
-  getters: {
-    getError: (state) => state.error,
-    getLoading: (state) => state.loading,
-    getGifs: (state) => state.gifs,
-  },
-  mutations: {
-    setGifs(state, data) {
-      state.gifs = data;
-    },
-    setLoading(state, value) {
-      state.loading = value;
-    },
-    setError(state, value) {
-      state.error = value;
-    },
-    setOffset(state, value) {
-      state.offset = value;
-    },
-    resetGifs(state) {
-      state.offset = null;
-      state.error = null;
-      state.loading = false;
-      state.gifs = [];
-    },
-  },
-  actions: {
-    async getGifsFromAPI({ commit, state }, { value, name }) {
-      try {
-        const offset = state.offset;
-        if (!offset) commit("setLoading", true);
+import { fetchGifsFromApi } from "@/services/api";
 
-        const fetchResponse = await getApiData({ value, name, offset });
-        const data = await fetchResponse?.json();
+export const useGifsStore = defineStore("gifStore", () => {
+  const gifs = ref([]);
+  const isLoading = ref(false);
+  const hasError = ref(false);
+  const _offset = ref(null);
 
-        commit("setOffset", data?.next);
-        let gifs = data?.results;
-        if (offset) gifs = [...state.gifs, ...gifs];
+  function $reset() {
+    _offset.value = null;
+    hasError.value = false;
+    isLoading.value = false;
+    gifs.value = [];
+  }
 
-        if (gifs?.length > 0) {
-          commit("setGifs", gifs);
-          commit("setError", false);
-        } else {
-          commit("setGifs", []);
-          commit("setError", true);
-        }
-        commit("setLoading", false);
-      } catch (e) {
-        commit("setError", true);
-        commit("setLoading", false);
-        commit("setOffset", null);
-      }
-    },
-  },
+  function _setGifs(data) {
+    gifs.value = data;
+  }
+
+  function _setLoadingStatus(value) {
+    isLoading.value = Boolean(value);
+  }
+
+  function _setErrorStatus(value) {
+    hasError.value = Boolean(value);
+  }
+
+  function setOffset(value) {
+    _offset.value = value;
+  }
+
+  async function fetchGifs({ query, category }) {
+    try {
+      if (!_offset.value) _setLoadingStatus(true);
+
+      const data = await fetchGifsFromApi({
+        query,
+        category,
+        offset: _offset.value,
+      });
+
+      if (!data) throw new Error("Failed to fetch data");
+
+      setOffset(data.next);
+
+      const result = data.results
+        ? _offset.value
+          ? [...gifs.value, ...data.results]
+          : data.results
+        : [];
+
+      _setGifs(result);
+      _setErrorStatus(result.length === 0);
+    } catch (e) {
+      _setErrorStatus(true);
+      setOffset(null);
+    } finally {
+      _setLoadingStatus(false);
+    }
+  }
+
+  return { gifs, isLoading, hasError, $reset, setOffset, fetchGifs };
 });
-
-export default store;
