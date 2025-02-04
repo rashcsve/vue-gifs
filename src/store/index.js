@@ -44,7 +44,6 @@ export const useGifsStore = defineStore("gifStore", () => {
 
       if (!data) throw new Error("Failed to fetch data");
 
-      setOffset(data.next);
 
       const result = data.results
         ? _offset.value
@@ -54,6 +53,7 @@ export const useGifsStore = defineStore("gifStore", () => {
 
       _setGifs(result);
       _setErrorStatus(result.length === 0);
+      setOffset(data.next);
     } catch (e) {
       _setErrorStatus(true);
       setOffset(null);
