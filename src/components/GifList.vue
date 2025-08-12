@@ -1,63 +1,81 @@
-<script setup>
-import { ref, computed, onBeforeUnmount } from "vue";
-import Gif from "@/components/GifItem.vue";
-import { useGifsStore } from "@/store/index";
+<script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { storeToRefs } from 'pinia'
+import Gif from '@/components/GifItem.vue'
+import { useGifsStore } from '@/store'
 
-const emit = defineEmits(["fetchGifs"]);
-const gifStore = useGifsStore();
+// EMITS
+const emit = defineEmits<{ (e: 'fetchGifs'): void }>()
 
-const observer = ref(null);
-observer.value = new IntersectionObserver(onElementObserved, {
-  threshold: 1.0,
-});
+// STORE
+const gifStore = useGifsStore()
+const { gifs, isLoading, isLoadingMore, error, hasMore } = storeToRefs(gifStore)
 
-const gifList = computed(() => gifStore.gifs);
-const isLoading = computed(() => gifStore.isLoading);
-const hasError = computed(() => gifStore.hasError);
+// REFS
+const listEl = ref<HTMLElement | null>(null)
+const observer = ref<IntersectionObserver | null>(null)
 
-const isLastItem = (index) => {
-  return index === gifList.value.length - 1;
-};
+// METHODS
+/**
+ * Observer callback:
+ * - When the observed sentinel item enters the viewport, unobserve it and ask parent to fetch more.
+ * - Guard against concurrent requests and when there's no more data.
+ */
+const onElementObserved: IntersectionObserverCallback = (entries, io) => {
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue
+    io.unobserve(entry.target)
 
-function onElementObserved(entries) {
-  entries.forEach(({ target, isIntersecting }) => {
-    if (!isIntersecting) {
-      return;
-    }
-    observer.value.unobserve(target);
-    emit("fetchGifs");
-  });
+    if (isLoading.value || isLoadingMore.value || !hasMore.value) continue
+
+    emit('fetchGifs')
+  }
 }
 
-onBeforeUnmount(() => observer.value.disconnect());
+onMounted(() => {
+  observer.value = new IntersectionObserver(onElementObserved, {
+    root: null,
+    rootMargin: '300px 0px 300px 0px',
+    threshold: 0.1
+  })
+})
+
+onBeforeUnmount(() => {
+  observer.value?.disconnect()
+  observer.value = null
+})
+
+const items = computed(() => gifs.value ?? [])
+const isLastIndex = (i: number) => i === items.value.length - 1
+
+
+const keyOf = (gif: unknown, idx: number) =>
+  (gif as { id?: string })?.id ?? idx
 </script>
 
 <template>
-  <p v-if="isLoading" class="loading">Loading...</p>
-  <section v-else class="gif-list" ref="gifList">
-    <div v-for="(gif, index) in gifList" :key="index">
-      <Gif :gif="gif" :observer="isLastItem(index) ? observer : null" />
+  <p v-if="error" class="mt-4 text-red-600 text-center">
+    {{ error }}
+  </p>
+
+  <p v-else-if="isLoading" class="mt-4 text-center">
+    Loading…
+  </p>
+
+  <section
+    v-else
+    ref="listEl"
+    class="mt-4 flex flex-wrap justify-center md:justify-between"
+  >
+    <div
+      v-for="(gif, index) in items"
+      :key="keyOf(gif, index)"
+    >
+      <Gif :gif="gif" :observer="isLastIndex(index) && hasMore ? observer : null" />
     </div>
-    <p v-if="hasError" ref="error">No such GIFs found...</p>
+
+    <p v-if="isLoadingMore" class="w-full text-center opacity-70">
+      Loading more…
+    </p>
   </section>
 </template>
-
-<style scoped>
-.gif-list {
-  margin-top: 1rem;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.loading {
-  text-align: center;
-  margin-top: 1rem;
-}
-
-@media screen and (min-width: 756px) {
-  .gif-list {
-    justify-content: space-between;
-  }
-}
-</style>

@@ -1,25 +1,41 @@
 {
   "name": "gifs",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview --port 4173",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview --host --port 4173",
+    "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint . --ext .vue,.js,.jsx,.ts,.tsx --fix --ignore-path .gitignore",
+    "lint:check": "eslint . --ext .vue,.js,.jsx,.ts,.tsx --max-warnings=0 --ignore-path .gitignore",
+    "format": "prettier --write .",
+    "build:analyze": "vite build --mode analyze"
   },
   "dependencies": {
-    "pinia": "^2.3.1",
-    "vue": "^3.2.37",
-    "vue-router": "^4.1.2",
-    "vuex": "^4.0.2"
+    "pinia": "^2.2.6",
+    "vue": "^3.5.6",
+    "vue-router": "^4.4.5"
   },
   "devDependencies": {
-    "@rushstack/eslint-patch": "^1.1.0",
-    "@vitejs/plugin-vue": "^5.2.1",
-    "@vue/eslint-config-prettier": "^7.0.0",
-    "eslint": "^8.5.0",
-    "eslint-plugin-vue": "^9.0.0",
-    "prettier": "^2.5.1",
-    "vite": "^6.0.11"
+    "@eslint/js": "^9.33.0",
+    "@tailwindcss/postcss": "^4.1.11",
+    "@types/node": "^22.5.4",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "@vitejs/plugin-vue": "^5.1.2",
+    "eslint": "^9.33.0",
+    "eslint-plugin-vue": "^9.33.0",
+    "globals": "^15.15.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.9.2",
+    "vite": "^6.0.11",
+    "vue-tsc": "^2.2.12"
   }
 }
