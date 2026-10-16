@@ -1,6 +1,19 @@
 {
   "description": "Shared with Claude Code: see AGENTS.md (Shared agent tooling).",
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash \"$(git rev-parse --show-toplevel)/scripts/ai/lint-on-edit.sh\"",
+            "timeout": 60,
+            "statusMessage": "Linting edited files"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

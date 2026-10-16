@@ -36,6 +36,18 @@
     }
   },
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/ai/lint-on-edit.sh",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

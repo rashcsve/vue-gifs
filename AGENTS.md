@@ -43,5 +43,6 @@ This file is the shared instruction source for every coding agent (Codex reads i
 | Diff reviewer (read-only) | `.claude/agents/reviewer.md`        | `reviewer` subagent                  | `.codex/agents/reviewer.toml`    |
 | Test writer               | `.claude/agents/test-writer.md`     | `test-writer` subagent               | `.codex/agents/test-writer.toml` |
 | Typecheck at end of turn  | `scripts/ai/typecheck-on-stop.sh`   | Stop hook in `.claude/settings.json` | Stop hook in `.codex/hooks.json` |
+| Lint + format per edit    | `scripts/ai/lint-on-edit.sh`        | PostToolUse `Edit\|MultiEdit\|Write` | PostToolUse `apply_patch`        |
 
 `.claude/skills/*` are symlinks to `.agents/skills/*`, so edit skills only in `.agents/skills/`.

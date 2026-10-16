@@ -36,7 +36,7 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 
 - [x] **5a.** Fix the lint scripts for ESLint 9 and the `eslint.config.js` crash. Turn on `@typescript-eslint/no-explicit-any`. Remove the "lint is broken" notes from `AGENTS.md` and the `verify` skill.
 - [x] **5b.** Add Prettier, husky, lint-staged and commitlint (Conventional Commits). Add an `npm run verify` script (typecheck, lint, test, build) that the `verify` skill, husky and CI all call. Needs: 5a.
-- [ ] **5c.** Add a per-edit ESLint/Prettier hook for Claude (`PostToolUse`, matcher `Edit|Write`) and Codex (`PostToolUse`, matcher `apply_patch`). Needs: 5b.
+- [x] **5c.** Add a per-edit ESLint/Prettier hook for Claude (`PostToolUse`, matcher `Edit|Write`) and Codex (`PostToolUse`, matcher `apply_patch`). Needs: 5b.
 - [ ] **6.** Add Vitest, `@vue/test-utils` and jsdom. First tests: `normalize`, `buildUrl` (giphy service) and the `fetchGifs` store action (first page, load more, race guard).
 - [ ] **7.** Add a GitHub Actions workflow that runs `npm run verify` on push and PR. Optional: AI PR review with `anthropics/claude-code-action@v1`. Needs: 5b, 6.
 - [ ] **8.** Add a `Dockerfile` and `docker-compose.yml` (dev on port 5173, preview on port 4173).
@@ -67,3 +67,6 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - `package.json:7`: `engines.node` is now `>=22.12.0` (commitlint 21 needs it; lint-staged is pinned to 16 because 17 needs 22.22.1). Nothing pins Node yet: add `.nvmrc` and use it in the Docker (8) and CI (7) steps. Found in 5b.
 - `package-lock.json`: `npm audit` reports 25 vulnerabilities (1 critical in `tar`, high in `vite`, `vue`, `postcss`, `rollup`, `@typescript-eslint/*`). All pre-date 5b (same count on the old lockfile). Needs its own dependency-upgrade step. Found in 5b.
 - `package.json:18`: `verify` type-checks twice (`typecheck` runs `vue-tsc --noEmit`, then `build` runs `vue-tsc -b`). Fine for now; revisit if pre-push gets slow. Found in 5b.
+- `scripts/ai/lint-on-edit.sh`: each edit starts a fresh ESLint (typescript-eslint + vue parser) and Prettier with no `--cache`. Fine for now; add caching (and gitignore `.eslintcache`) if per-edit hooks get slow. Found in 5c.
+- `.codex/hooks.json`: both hooks locate the script with `$(git rev-parse --show-toplevel)`, which is empty outside a git repo and gives a "No such file" error. Only matters if the repo is used without `.git` (e.g. a tarball). Found in 5c.
+- `scripts/ai/`: the hook scripts have no automated tests. Consider bats or a small Vitest spec that pipes sample payloads in once step 6 lands. Found in 5c.
