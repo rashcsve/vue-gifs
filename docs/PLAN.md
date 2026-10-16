@@ -37,8 +37,8 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - [x] **5a.** Fix the lint scripts for ESLint 9 and the `eslint.config.js` crash. Turn on `@typescript-eslint/no-explicit-any`. Remove the "lint is broken" notes from `AGENTS.md` and the `verify` skill.
 - [x] **5b.** Add Prettier, husky, lint-staged and commitlint (Conventional Commits). Add an `npm run verify` script (typecheck, lint, test, build) that the `verify` skill, husky and CI all call. Needs: 5a.
 - [x] **5c.** Add a per-edit ESLint/Prettier hook for Claude (`PostToolUse`, matcher `Edit|Write`) and Codex (`PostToolUse`, matcher `apply_patch`). Needs: 5b.
-- [ ] **6.** Add Vitest, `@vue/test-utils` and jsdom. First tests: `normalize`, `buildUrl` (giphy service) and the `fetchGifs` store action (first page, load more, race guard).
-- [ ] **7.** Add a GitHub Actions workflow that runs `npm run verify` on push and PR. Optional: AI PR review with `anthropics/claude-code-action@v1`. Needs: 5b, 6.
+- [x] **6.** Add Vitest, `@vue/test-utils` and jsdom. First tests: `normalize`, `buildUrl` (giphy service) and the `fetchGifs` store action (first page, load more, race guard).
+- [x] **7.** Add a GitHub Actions workflow that runs `npm run verify` on push and PR. Optional: AI PR review with `anthropics/claude-code-action@v1`. Needs: 5b, 6.
 - [ ] **8.** Add a `Dockerfile` and `docker-compose.yml` (dev on port 5173, preview on port 4173).
 - [ ] **8b.** Give agents eyes: a Playwright MCP server in `.mcp.json` (Claude) and `.codex/config.toml` (Codex) so they can check the UI in a browser before the UI steps.
 
@@ -64,7 +64,7 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - `eslint.config.js:18`: `ignores` is copied by hand from `.gitignore` and leaves out `logs`, `*.log` and `cypress/`, so it will drift. Fix with `includeIgnoreFile` from `@eslint/compat` (new dependency, needs approval). Found in 5a.
 - `src/store/index.ts:105`: `catch {}` swallows the error with no logging, so every failure becomes the generic "Failed to load GIFs.". Covered by step 9. Found in 5a.
 - `package.json:20`: `"prepare": "husky"` fails on installs without devDependencies (`npm ci --omit=dev`), so the step 8 Dockerfile's prod stage needs `--ignore-scripts` or `"husky || true"`. Found in 5b.
-- `package.json:7`: `engines.node` is now `>=22.12.0` (commitlint 21 needs it; lint-staged is pinned to 16 because 17 needs 22.22.1). Nothing pins Node yet: add `.nvmrc` and use it in the Docker (8) and CI (7) steps. Found in 5b.
+- `package.json:7`: `engines.node` is now `>=22.12.0` (commitlint 21 needs it; lint-staged is pinned to 16 because 17 needs 22.22.1). `.nvmrc` (22.19.0) now pins Node for CI (7); use it in the Docker step (8) too. Found in 5b.
 - `package-lock.json`: `npm audit` reports 25 vulnerabilities (1 critical in `tar`, high in `vite`, `vue`, `postcss`, `rollup`, `@typescript-eslint/*`). All pre-date 5b (same count on the old lockfile). Needs its own dependency-upgrade step. Found in 5b.
 - `package.json:18`: `verify` type-checks twice (`typecheck` runs `vue-tsc --noEmit`, then `build` runs `vue-tsc -b`). Fine for now; revisit if pre-push gets slow. Found in 5b.
 - `scripts/ai/lint-on-edit.sh`: each edit starts a fresh ESLint (typescript-eslint + vue parser) and Prettier with no `--cache`. Fine for now; add caching (and gitignore `.eslintcache`) if per-edit hooks get slow. Found in 5c.
@@ -75,6 +75,9 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - `src/services/giphy.ts:11`: `buildUrl` and `normalize` are exported for tests, so they also leak through the `export *` barrel in `src/services/index.ts`. Narrow the barrel in step 9. Found in 6.
 - `vite.config.ts`: not covered by any tsconfig, so the `test` block is never type-checked. Add a `tsconfig.node.json` (or similar). Found in 6.
 - `tsconfig.tsbuildinfo` is tracked, and every `npm run build` (`vue-tsc -b`) rewrites it. Untrack it and add it to `.gitignore`. Found in 6.
-- `node_modules/nopt`, `abbrev` (via `@vue/test-utils` → `js-beautify`) declare Node `^22.22.2`, giving an EBADENGINE warning on Node 22.19. Harmless (CLI-only deps); goes away once `.nvmrc` pins a newer 22.x. Found in 6.
+- `node_modules/nopt`, `abbrev` (via `@vue/test-utils` → `js-beautify`) declare Node `^22.22.2`, giving an EBADENGINE warning on Node 22.19. Harmless (CLI-only deps); also shows in CI, since `.nvmrc` pins 22.19.0; goes away if `.nvmrc` moves to 22.22.2+. Found in 6.
 - `vite.config.ts`: `test.environment` is `jsdom` globally, which adds ~1s per run for logic-only specs. Switch the default to `node` with per-file `// @vitest-environment jsdom` if the suite gets slow. Found in 6.
 - `~/.npm` cache: the agent sandbox can only write `~/.npm/_logs`, so agent installs need `npm_config_cache=$TMPDIR/npm-cache`. Found in 6.
+- `.github/workflows/ci.yml:20`: `actions/checkout` and `actions/setup-node` use floating major tags (`@v6`). Pin them to commit SHAs (with a `# v6.x.y` comment) and let Dependabot bump them. Found in 7.
+- `.github/workflows/ci.yml`: commitlint only runs in the local husky `commit-msg` hook, so `--no-verify` commits and commits made in the GitHub web UI skip it. Add a `commitlint --from <base> --to <head>` step on `pull_request`. Found in 7.
+- `.github/workflows/ci.yml`: the optional AI PR review (`anthropics/claude-code-action@v1`) from step 7 isn't added yet. It needs an `ANTHROPIC_API_KEY` repo secret. Found in 7.

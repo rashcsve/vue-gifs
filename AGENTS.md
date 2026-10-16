@@ -12,7 +12,7 @@ This file is the shared instruction source for every coding agent (Codex reads i
 - `npm run format:check`: run Prettier (`npm run format` rewrites)
 - `npm run build`: production build
 - `npm test`: unit tests (Vitest; `npm run test:watch` for watch mode)
-- `npm run verify`: every gate above in one go; husky `pre-push` runs the same script (and CI will, from plan step 7)
+- `npm run verify`: every gate above in one go; husky `pre-push` and CI (`.github/workflows/ci.yml`) run the same script
 
 ## Conventions
 

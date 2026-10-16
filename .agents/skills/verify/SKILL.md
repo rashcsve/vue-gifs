@@ -7,7 +7,7 @@ description: Run the project's quality gates (typecheck, lint, tests, build) and
 
 Shared by Claude Code (`/verify`) and Codex (`$verify`).
 
-Run `npm run verify`. It is the same gate husky runs on `pre-push` (and CI will, from plan step 7): typecheck, lint, format check, unit tests and build, stopping at the first failure.
+Run `npm run verify`. It is the same gate husky runs on `pre-push` and CI runs on pushes to `main` and on every PR: typecheck, lint, format check, unit tests and build, stopping at the first failure.
 
 If it fails, run the checks it didn't reach one at a time so the full picture is visible:
 
