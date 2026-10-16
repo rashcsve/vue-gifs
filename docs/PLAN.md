@@ -6,19 +6,19 @@ Stack, conventions and working rules live in `AGENTS.md`.
 
 ## Known issues (baseline)
 
-| Area | Issue | Fixed in |
-|---|---|---|
-| Tooling | `lint` / `lint:check` use `--ignore-path`, which ESLint 9 rejects; `eslint.config.js` crashes (`vue.parsers` is undefined) | 5a |
-| Tooling | No tests, CI, Docker or pre-commit hooks | 5b–8 |
-| Security | The GIPHY key ships in the client bundle | 13 |
-| Architecture | Trends and search pages share one store, so state leaks between them | 10 |
-| Architecture | `getJson` returns `null` on errors, which hides them | 9 |
-| Architecture | `AbortSignal` is passed through but never used, so stale requests aren't cancelled | 9 |
-| Components | GIFs use CSS `background-image`, so no lazy loading and weak alt text | 11 |
-| Components | `App.vue` hardcodes route names (should use `RouteName`) and repeats `max-w`/`mx-auto` | 11 |
-| Components | Tailwind tokens `text-text` and `border-dividerDark2` may not be defined | 11 |
-| Components | Unneeded `keyOf` cast in `GifList.vue` | 11 |
-| Search | Escape doesn't cancel the pending debounce; query isn't in the URL | 12 |
+| Area         | Issue                                                                                                                      | Fixed in |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Tooling      | `lint` / `lint:check` use `--ignore-path`, which ESLint 9 rejects; `eslint.config.js` crashes (`vue.parsers` is undefined) | 5a       |
+| Tooling      | No tests, CI, Docker or pre-commit hooks                                                                                   | 5b–8     |
+| Security     | The GIPHY key ships in the client bundle                                                                                   | 13       |
+| Architecture | Trends and search pages share one store, so state leaks between them                                                       | 10       |
+| Architecture | `getJson` returns `null` on errors, which hides them                                                                       | 9        |
+| Architecture | `AbortSignal` is passed through but never used, so stale requests aren't cancelled                                         | 9        |
+| Components   | GIFs use CSS `background-image`, so no lazy loading and weak alt text                                                      | 11       |
+| Components   | `App.vue` hardcodes route names (should use `RouteName`) and repeats `max-w`/`mx-auto`                                     | 11       |
+| Components   | Tailwind tokens `text-text` and `border-dividerDark2` may not be defined                                                   | 11       |
+| Components   | Unneeded `keyOf` cast in `GifList.vue`                                                                                     | 11       |
+| Search       | Escape doesn't cancel the pending debounce; query isn't in the URL                                                         | 12       |
 
 ## Phase 0: Finish open work
 
@@ -63,3 +63,7 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 
 - `eslint.config.js:18`: `ignores` is copied by hand from `.gitignore` and leaves out `logs`, `*.log` and `cypress/`, so it will drift. Fix with `includeIgnoreFile` from `@eslint/compat` (new dependency, needs approval). Found in 5a.
 - `src/store/index.ts:105`: `catch {}` swallows the error with no logging, so every failure becomes the generic "Failed to load GIFs.". Covered by step 9. Found in 5a.
+- `package.json:20`: `"prepare": "husky"` fails on installs without devDependencies (`npm ci --omit=dev`), so the step 8 Dockerfile's prod stage needs `--ignore-scripts` or `"husky || true"`. Found in 5b.
+- `package.json:7`: `engines.node` is now `>=22.12.0` (commitlint 21 needs it; lint-staged is pinned to 16 because 17 needs 22.22.1). Nothing pins Node yet: add `.nvmrc` and use it in the Docker (8) and CI (7) steps. Found in 5b.
+- `package-lock.json`: `npm audit` reports 25 vulnerabilities (1 critical in `tar`, high in `vite`, `vue`, `postcss`, `rollup`, `@typescript-eslint/*`). All pre-date 5b (same count on the old lockfile). Needs its own dependency-upgrade step. Found in 5b.
+- `package.json:18`: `verify` type-checks twice (`typecheck` runs `vue-tsc --noEmit`, then `build` runs `vue-tsc -b`). Fine for now; revisit if pre-push gets slow. Found in 5b.

@@ -3,6 +3,7 @@ import vue from 'eslint-plugin-vue'
 import tsPlugin from '@typescript-eslint/eslint-plugin'
 import tsParser from '@typescript-eslint/parser'
 import globals from 'globals'
+import prettier from 'eslint-config-prettier'
 
 const tsRules = {
   ...js.configs.recommended.rules,
@@ -51,5 +52,6 @@ export default [
     rules: {
       ...js.configs.recommended.rules
     }
-  }
+  },
+  prettier
 ]

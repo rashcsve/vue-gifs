@@ -1,0 +1,8 @@
+dist
+dist-ssr
+coverage
+public
+package-lock.json
+tsconfig.tsbuildinfo
+# Secrets; the agent sandbox also denies reading these
+.env*
