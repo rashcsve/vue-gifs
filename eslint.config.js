@@ -4,12 +4,22 @@ import tsPlugin from '@typescript-eslint/eslint-plugin'
 import tsParser from '@typescript-eslint/parser'
 import globals from 'globals'
 
+const tsRules = {
+  ...js.configs.recommended.rules,
+  // TypeScript already reports undefined names; the base rule misfires on types
+  'no-undef': 'off',
+  'no-unused-vars': 'off',
+  '@typescript-eslint/no-unused-vars': 'error',
+  '@typescript-eslint/no-explicit-any': 'error',
+  '@typescript-eslint/consistent-type-imports': 'warn'
+}
+
 export default [
-  { ignores: ['dist', 'node_modules'] },
+  { ignores: ['dist', 'dist-ssr', 'coverage', 'node_modules', '**/*.local'] },
+  ...vue.configs['flat/recommended'],
   {
     files: ['**/*.vue'],
     languageOptions: {
-      parser: vue.parsers['vue-eslint-parser'],
       parserOptions: {
         parser: tsParser,
         ecmaVersion: 'latest',
@@ -18,11 +28,8 @@ export default [
       },
       globals: { ...globals.browser, ...globals.es2021 }
     },
-    plugins: { vue, '@typescript-eslint': tsPlugin },
-    rules: {
-      ...vue.configs['flat/recommended'].rules,
-      '@typescript-eslint/consistent-type-imports': 'warn'
-    }
+    plugins: { '@typescript-eslint': tsPlugin },
+    rules: tsRules
   },
   {
     files: ['**/*.{ts,tsx}'],
@@ -32,10 +39,7 @@ export default [
       globals: { ...globals.browser, ...globals.es2021 }
     },
     plugins: { '@typescript-eslint': tsPlugin },
-    rules: {
-      ...js.configs.recommended.rules,
-      '@typescript-eslint/consistent-type-imports': 'warn'
-    }
+    rules: tsRules
   },
   {
     files: ['**/*.{js,cjs,mjs}'],

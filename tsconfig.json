@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] },
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -10,6 +9,7 @@
     "jsx": "preserve",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "noEmit": true,
     "types": ["vite/client"]
   },
   "include": ["src", "env.d.ts"]

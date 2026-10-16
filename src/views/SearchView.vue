@@ -71,24 +71,29 @@ onMounted(() => {
 </script>
 
 <template>
-  <h1 class="text-2xl font-semibold mb-4">Search GIFs</h1>
+  <h1 class="text-2xl font-semibold mb-4">
+    Search GIFs
+  </h1>
 
   <div class="input-wrapper">
     <input
       ref="inputEl"
+      v-model="searchQuery"
       type="text"
       class="border rounded px-3 py-2 w-full max-w-md"
       placeholder="Search GIFs…"
-      v-model="searchQuery"
-      @input="handleSearchInput"
-      @keydown="onKeydown"
       autocomplete="off"
       spellcheck="false"
       aria-label="Search GIFs"
-    />
+      @input="handleSearchInput"
+      @keydown="onKeydown"
+    >
   </div>
 
-  <div class="sr-only" aria-live="polite">
+  <div
+    class="sr-only"
+    aria-live="polite"
+  >
     <span v-if="isLoading || isLoadingMore">Loading…</span>
     <span v-else-if="error">{{ error }}</span>
     <span v-else-if="!isLoading && !isLoadingMore && gifs.length === 0 && !!searchQuery">
@@ -96,7 +101,10 @@ onMounted(() => {
     </span>
   </div>
 
-  <p v-if="error" class="mt-3 text-red-600">
+  <p
+    v-if="error"
+    class="mt-3 text-red-600"
+  >
     {{ error }}
     <button
       class="underline ml-2"
@@ -114,5 +122,8 @@ onMounted(() => {
     No results for “{{ searchQuery }}”. Try a different keyword.
   </p>
 
-  <GifList class="mt-4" @fetchGifs="fetchGifs" />
+  <GifList
+    class="mt-4"
+    @fetch-gifs="fetchGifs"
+  />
 </template>

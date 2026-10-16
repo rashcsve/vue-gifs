@@ -26,9 +26,11 @@
     </main>
 
     <footer class="mt-8 text-center text-[12px] opacity-70">
-      <a href="https://giphy.com" target="_blank" rel="noopener noreferrer"
-        >Powered by GIPHY</a
-      >
+      <a
+        href="https://giphy.com"
+        target="_blank"
+        rel="noopener noreferrer"
+      >Powered by GIPHY</a>
     </footer>
   </div>
 </template>

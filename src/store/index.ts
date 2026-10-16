@@ -102,7 +102,7 @@ export const useGifsStore = defineStore('gifs', () => {
       if (firstPage && gifs.value.length === 0) {
         error.value = 'No GIFs found.'
       }
-    } catch (e) {
+    } catch {
       // Also ignore errors from outdated responses
       if (myId !== requestId) return
 

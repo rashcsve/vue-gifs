@@ -54,11 +54,17 @@ const keyOf = (gif: unknown, idx: number) =>
 </script>
 
 <template>
-  <p v-if="error" class="mt-4 text-red-600 text-center">
+  <p
+    v-if="error"
+    class="mt-4 text-red-600 text-center"
+  >
     {{ error }}
   </p>
 
-  <p v-else-if="isLoading" class="mt-4 text-center">
+  <p
+    v-else-if="isLoading"
+    class="mt-4 text-center"
+  >
     Loading…
   </p>
 
@@ -71,10 +77,16 @@ const keyOf = (gif: unknown, idx: number) =>
       v-for="(gif, index) in items"
       :key="keyOf(gif, index)"
     >
-      <Gif :gif="gif" :observer="isLastIndex(index) && hasMore ? observer : null" />
+      <Gif
+        :gif="gif"
+        :observer="isLastIndex(index) && hasMore ? observer : null"
+      />
     </div>
 
-    <p v-if="isLoadingMore" class="w-full text-center opacity-70">
+    <p
+      v-if="isLoadingMore"
+      class="w-full text-center opacity-70"
+    >
       Loading more…
     </p>
   </section>

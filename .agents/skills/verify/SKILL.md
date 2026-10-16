@@ -9,7 +9,7 @@ Shared by Claude Code (`/verify`) and Codex (`$verify`).
 Run these in order and keep going after a failure so the full picture is visible:
 
 1. `npm run typecheck`
-2. `npm run lint:check` (known broken until PLAN step 5a; report it but don't block on it)
+2. `npm run lint:check`
 3. `npm test`, if a `test` script exists in `package.json`
 4. `npm run build`
 

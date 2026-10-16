@@ -8,7 +8,7 @@ This file is the shared instruction source for every coding agent (Codex reads i
 
 - `npm run dev`: start the dev server
 - `npm run typecheck`: run vue-tsc
-- `npm run lint:check`: run ESLint (currently broken; plan step 5a fixes it)
+- `npm run lint:check`: run ESLint (`npm run lint` autofixes)
 - `npm run build`: production build
 - `npm test`: unit tests (added in plan step 6)
 
