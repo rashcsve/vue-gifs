@@ -1,7 +1,9 @@
 <template>
   <div class="max-w-[1280px] font-normal mx-auto p-8 max-w-screen-lg mx-auto">
     <header>
-      <nav class="w-full text-[12px] text-center mt-4 max-w-[1280px] mx-auto lg:text-left lg:-ml-4 lg:text-base lg:py-4">
+      <nav
+        class="w-full text-[12px] text-center mt-4 max-w-[1280px] mx-auto lg:text-left lg:-ml-4 lg:text-base lg:py-4"
+      >
         <RouterLink
           :to="{ name: 'trends' }"
           class="inline-block px-4 no-underline text-text transition-colors hover:bg-[hsla(160,100%,37%,0.2)]"
@@ -22,5 +24,11 @@
     <main class="mt-2">
       <RouterView />
     </main>
+
+    <footer class="mt-8 text-center text-[12px] opacity-70">
+      <a href="https://giphy.com" target="_blank" rel="noopener noreferrer"
+        >Powered by GIPHY</a
+      >
+    </footer>
   </div>
 </template>

@@ -2,7 +2,7 @@
 
 https://shimmering-blancmange-2b1e5e.netlify.app/
 
-An application in Vue.js using Vite, Vuex and Vue-router showing gifs via [Tenor API](https://tenor.com/gifapi/documentation).
+An application in Vue.js using Vite, Pinia and Vue-router showing gifs via the [GIPHY API](https://developers.giphy.com/docs/api/).
 
 
 ## Trends
@@ -15,6 +15,7 @@ An application in Vue.js using Vite, Vuex and Vue-router showing gifs via [Tenor
 
 ```sh
 npm install
+cp .env.example .env.local   # then add your free GIPHY API key
 ```
 
 ### Compile and Hot-Reload for Development

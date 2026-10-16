@@ -1,8 +1,8 @@
 // Central place for API constants and env
-export const API_BASE = 'https://g.tenor.com/v1'
-export const DEFAULT_LIMIT = 12
-export const DEFAULT_LOCALE = 'cs_CZ'
+export const API_BASE = "https://api.giphy.com/v1/gifs";
+export const DEFAULT_LIMIT = 12;
+export const DEFAULT_LANG = "cs";
+export const DEFAULT_RATING = "g";
 
-// Prefer env for real usage; fallback demo key keeps the app runnable
-export const TENOR_API_KEY =
-  import.meta.env.VITE_TENOR_API_KEY ?? 'LIVDSRZULELA'
+// Get a free key at https://developers.giphy.com/dashboard/ and put it in .env.local
+export const GIPHY_API_KEY = import.meta.env.VITE_GIPHY_API_KEY ?? "";
