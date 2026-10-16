@@ -39,7 +39,7 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - [x] **5c.** Add a per-edit ESLint/Prettier hook for Claude (`PostToolUse`, matcher `Edit|Write`) and Codex (`PostToolUse`, matcher `apply_patch`). Needs: 5b.
 - [x] **6.** Add Vitest, `@vue/test-utils` and jsdom. First tests: `normalize`, `buildUrl` (giphy service) and the `fetchGifs` store action (first page, load more, race guard).
 - [x] **7.** Add a GitHub Actions workflow that runs `npm run verify` on push and PR. Optional: AI PR review with `anthropics/claude-code-action@v1`. Needs: 5b, 6.
-- [ ] **8.** Add a `Dockerfile` and `docker-compose.yml` (dev on port 5173, preview on port 4173).
+- [x] **8.** Add a `Dockerfile` and `docker-compose.yml` (dev on port 5173, preview on port 4173).
 - [ ] **8b.** Give agents eyes: a Playwright MCP server in `.mcp.json` (Claude) and `.codex/config.toml` (Codex) so they can check the UI in a browser before the UI steps.
 
 ## Phase 3: Refactor (one PR per step)
@@ -63,8 +63,8 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 
 - `eslint.config.js:18`: `ignores` is copied by hand from `.gitignore` and leaves out `logs`, `*.log` and `cypress/`, so it will drift. Fix with `includeIgnoreFile` from `@eslint/compat` (new dependency, needs approval). Found in 5a.
 - `src/store/index.ts:105`: `catch {}` swallows the error with no logging, so every failure becomes the generic "Failed to load GIFs.". Covered by step 9. Found in 5a.
-- `package.json:20`: `"prepare": "husky"` fails on installs without devDependencies (`npm ci --omit=dev`), so the step 8 Dockerfile's prod stage needs `--ignore-scripts` or `"husky || true"`. Found in 5b.
-- `package.json:7`: `engines.node` is now `>=22.12.0` (commitlint 21 needs it; lint-staged is pinned to 16 because 17 needs 22.22.1). `.nvmrc` (22.19.0) now pins Node for CI (7); use it in the Docker step (8) too. Found in 5b.
+- `package.json:20`: `"prepare": "husky"` fails on installs without devDependencies (`npm ci --omit=dev`), so the step 8 Dockerfile's prod stage needs `--ignore-scripts` or `"husky || true"`. Found in 5b. Docker (8) sidesteps it with `ENV HUSKY=0` and keeps devDependencies; still applies to any future `--omit=dev` install.
+- `package.json:7`: `engines.node` is now `>=22.12.0` (commitlint 21 needs it; lint-staged is pinned to 16 because 17 needs 22.22.1). `.nvmrc` (22.19.0) now pins Node for CI (7); use it in the Docker step (8) too. Found in 5b. Done in 8 (`node:22.19.0-alpine`).
 - `package-lock.json`: `npm audit` reports 25 vulnerabilities (1 critical in `tar`, high in `vite`, `vue`, `postcss`, `rollup`, `@typescript-eslint/*`). All pre-date 5b (same count on the old lockfile). Needs its own dependency-upgrade step. Found in 5b.
 - `package.json:18`: `verify` type-checks twice (`typecheck` runs `vue-tsc --noEmit`, then `build` runs `vue-tsc -b`). Fine for now; revisit if pre-push gets slow. Found in 5b.
 - `scripts/ai/lint-on-edit.sh`: each edit starts a fresh ESLint (typescript-eslint + vue parser) and Prettier with no `--cache`. Fine for now; add caching (and gitignore `.eslintcache`) if per-edit hooks get slow. Found in 5c.
@@ -81,3 +81,6 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - `.github/workflows/ci.yml:20`: `actions/checkout` and `actions/setup-node` use floating major tags (`@v6`). Pin them to commit SHAs (with a `# v6.x.y` comment) and let Dependabot bump them. Found in 7.
 - `.github/workflows/ci.yml`: commitlint only runs in the local husky `commit-msg` hook, so `--no-verify` commits and commits made in the GitHub web UI skip it. Add a `commitlint --from <base> --to <head>` step on `pull_request`. Found in 7.
 - `.github/workflows/ci.yml`: the optional AI PR review (`anthropics/claude-code-action@v1`) from step 7 isn't added yet. It needs an `ANTHROPIC_API_KEY` repo secret. Found in 7.
+- `Dockerfile:4`: the image tag `node:22.19.0-alpine` duplicates `.nvmrc` by hand, so the two can drift. Docker Scout also reports 6 critical and 60 high vulnerabilities in that image. Bump `.nvmrc` and the tag together (22.22.2+ also clears the EBADENGINE warning), and consider a check that keeps them in sync. Found in 8.
+- `Dockerfile:15`: the dev container runs as root on a bind mount, so on Linux hosts files Vite writes into the checkout (e.g. `vite.config.ts.timestamp-*.mjs`) are root-owned. Fix with `USER node` plus `chown` of `/app` and the `node_modules` volume. Untested because the Docker daemon wasn't running. Found in 8.
+- `docker-compose.yml:17`: the anonymous `node_modules` volume only refreshes with `-V` (`--renew-anon-volumes`). Consider Compose `develop.watch` with `action: rebuild` on `package-lock.json` to remove the footgun. Found in 8.

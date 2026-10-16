@@ -1,0 +1,25 @@
+node_modules
+dist
+dist-ssr
+coverage
+*.log
+# A host buildinfo could make `vue-tsc -b` skip type-checking in the image
+*.tsbuildinfo
+.git
+.github
+.husky
+.vscode
+.idea
+.DS_Store
+
+# Agent tooling and docs aren't needed to build
+.agents
+.claude
+.codex
+docs
+scripts
+
+# Secrets: the build gets .env.local as a BuildKit secret, never via COPY
+.env*
+Dockerfile
+docker-compose.yml

@@ -1,0 +1,30 @@
+# docker compose up --build -V dev   -> http://localhost:5173 (HMR, source bind-mounted)
+# docker compose up --build preview  -> http://localhost:4173 (production build; needs .env.local)
+# -V renews the anonymous node_modules volume, so dependency changes reach the dev container.
+services:
+  dev:
+    build:
+      context: .
+      target: dev
+    # If HMR misses file changes (non-VirtioFS file sharing), uncomment:
+    # environment:
+    #   CHOKIDAR_USEPOLLING: 'true'
+    ports:
+      - '127.0.0.1:5173:5173'
+    volumes:
+      - .:/app
+      # Keep the container's Linux node_modules instead of the host's
+      - /app/node_modules
+
+  preview:
+    build:
+      context: .
+      target: preview
+      secrets:
+        - env_local
+    ports:
+      - '127.0.0.1:4173:4173'
+
+secrets:
+  env_local:
+    file: .env.local
