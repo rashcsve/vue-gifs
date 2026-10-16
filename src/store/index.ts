@@ -1,12 +1,7 @@
 // src/store/index.ts
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import {
-  fetchGifsFromApi,
-  type Category,
-  type GifsResponse,
-  type GifItem
-} from '@/services'
+import { fetchGifsFromApi, type Category, type GifsResponse, type GifItem } from '@/services'
 
 /**
  * Pinia store for GIFs
@@ -16,11 +11,11 @@ import {
  */
 export const useGifsStore = defineStore('gifs', () => {
   // --- STATE ---
-  const gifs = ref<GifItem[]>([])          // All loaded GIFs
-  const isLoading = ref(false)             // Loading state for first page
-  const isLoadingMore = ref(false)         // Loading state for subsequent pages
-  const error = ref<string | null>(null)   // Error message or null if no error
-  const next = ref<string | null>(null)    // Next-page token from API (a.k.a. offset)
+  const gifs = ref<GifItem[]>([]) // All loaded GIFs
+  const isLoading = ref(false) // Loading state for first page
+  const isLoadingMore = ref(false) // Loading state for subsequent pages
+  const error = ref<string | null>(null) // Error message or null if no error
+  const next = ref<string | null>(null) // Next-page token from API (a.k.a. offset)
 
   // Tracks the latest request to avoid updating state from out-of-order responses
   let requestId = 0

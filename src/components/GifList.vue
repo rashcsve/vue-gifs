@@ -48,46 +48,21 @@ onBeforeUnmount(() => {
 const items = computed(() => gifs.value ?? [])
 const isLastIndex = (i: number) => i === items.value.length - 1
 
-
-const keyOf = (gif: unknown, idx: number) =>
-  (gif as { id?: string })?.id ?? idx
+const keyOf = (gif: unknown, idx: number) => (gif as { id?: string })?.id ?? idx
 </script>
 
 <template>
-  <p
-    v-if="error"
-    class="mt-4 text-red-600 text-center"
-  >
+  <p v-if="error" class="mt-4 text-red-600 text-center">
     {{ error }}
   </p>
 
-  <p
-    v-else-if="isLoading"
-    class="mt-4 text-center"
-  >
-    Loading…
-  </p>
+  <p v-else-if="isLoading" class="mt-4 text-center">Loading…</p>
 
-  <section
-    v-else
-    ref="listEl"
-    class="mt-4 flex flex-wrap justify-center md:justify-between"
-  >
-    <div
-      v-for="(gif, index) in items"
-      :key="keyOf(gif, index)"
-    >
-      <Gif
-        :gif="gif"
-        :observer="isLastIndex(index) && hasMore ? observer : null"
-      />
+  <section v-else ref="listEl" class="mt-4 flex flex-wrap justify-center md:justify-between">
+    <div v-for="(gif, index) in items" :key="keyOf(gif, index)">
+      <Gif :gif="gif" :observer="isLastIndex(index) && hasMore ? observer : null" />
     </div>
 
-    <p
-      v-if="isLoadingMore"
-      class="w-full text-center opacity-70"
-    >
-      Loading more…
-    </p>
+    <p v-if="isLoadingMore" class="w-full text-center opacity-70">Loading more…</p>
   </section>
 </template>

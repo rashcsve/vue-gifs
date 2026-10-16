@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import type { GifItem } from "@/services";
+import { ref, onMounted } from 'vue'
+import type { GifItem } from '@/services'
 
 const props = defineProps<{
-  gif: GifItem;
-  observer: IntersectionObserver | null;
-}>();
-const root = ref<HTMLElement | null>(null);
+  gif: GifItem
+  observer: IntersectionObserver | null
+}>()
+const root = ref<HTMLElement | null>(null)
 
 onMounted(() => {
-  if (props.observer && root.value) props.observer.observe(root.value);
-});
+  if (props.observer && root.value) props.observer.observe(root.value)
+})
 </script>
 
 <template>

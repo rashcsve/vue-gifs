@@ -2,6 +2,7 @@
 name: next-step
 description: Pick up the next unchecked step from docs/PLAN.md (or a given step number), plan it, implement it after approval, verify, and get it reviewed. Use when the user says "next step", "continue the plan", or names a step number.
 ---
+
 # Next plan step
 
 Shared by Claude Code (`/next-step [n]`) and Codex (`$next-step`). Requested step, if any: $ARGUMENTS
@@ -16,6 +17,7 @@ Shared by Claude Code (`/next-step [n]`) and Codex (`$next-step`). Requested ste
    - how it will be verified, including what to click in the running app
 
    **Stop and wait for approval.**
+
 3. If the step changes logic and Vitest exists: spawn the `test-writer` subagent to write failing tests from the plan, run them to confirm they fail, and show them to the user. **Wait for approval of the tests.**
 4. Implement in small edits that follow the conventions in `AGENTS.md`. Don't edit tests to make them pass; if a test looks wrong, stop and ask.
 5. Run the `verify` skill. Fix failures that are inside this step. Anything else: show the error and propose a fix. If the same failure survives two fix attempts, stop and report what you tried.

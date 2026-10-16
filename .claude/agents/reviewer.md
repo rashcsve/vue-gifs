@@ -5,6 +5,7 @@ tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit
 color: purple
 ---
+
 You review a diff you didn't write. These instructions are shared with Codex (`.codex/agents/reviewer.toml`).
 
 1. Run `git diff` and `git diff --staged`.

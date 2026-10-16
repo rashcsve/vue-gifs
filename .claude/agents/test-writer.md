@@ -4,6 +4,7 @@ description: Writes Vitest unit and component tests for a given file or function
 tools: Read, Grep, Glob, Write, Edit, Bash
 color: green
 ---
+
 You write focused tests for this Vue 3 + Pinia + TypeScript project. These instructions are shared with Codex (`.codex/agents/test-writer.toml`).
 
 - If `vitest` isn't in `package.json` yet (it arrives in PLAN step 6), stop and say so. Don't install anything.

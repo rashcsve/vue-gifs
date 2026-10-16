@@ -33,22 +33,14 @@ onMounted(() => {
 </script>
 
 <template>
-  <h1 class="text-3xl font-semibold mb-4 text-center lg:text-left">
-    Trending GIFs
-  </h1>
+  <h1 class="text-3xl font-semibold mb-4 text-center lg:text-left">Trending GIFs</h1>
 
-  <div
-    class="sr-only"
-    aria-live="polite"
-  >
+  <div class="sr-only" aria-live="polite">
     <span v-if="isLoading || isLoadingMore">Loading…</span>
     <span v-else-if="error">{{ error }}</span>
   </div>
 
-  <p
-    v-if="error"
-    class="mb-3 text-red-600"
-  >
+  <p v-if="error" class="mb-3 text-red-600">
     {{ error }}
     <button
       class="underline ml-2"
@@ -59,10 +51,7 @@ onMounted(() => {
     </button>
   </p>
 
-  <p
-    v-else-if="!isLoading && !isLoadingMore && gifs.length === 0"
-    class="opacity-70 mb-3"
-  >
+  <p v-else-if="!isLoading && !isLoadingMore && gifs.length === 0" class="opacity-70 mb-3">
     No trending GIFs right now. Please try again.
   </p>
 

@@ -1,10 +1,4 @@
-import {
-  API_BASE,
-  DEFAULT_LANG,
-  DEFAULT_LIMIT,
-  DEFAULT_RATING,
-  GIPHY_API_KEY
-} from '@/config/api'
+import { API_BASE, DEFAULT_LANG, DEFAULT_LIMIT, DEFAULT_RATING, GIPHY_API_KEY } from '@/config/api'
 import { getJson } from './http'
 import type { Category, GifItem, GifsResponse, GiphyGif, GiphyResponse } from './types'
 
@@ -14,11 +8,14 @@ const MAX_OFFSET = 4999
 /**
  * Build a GIPHY endpoint URL safely using the URL API.
  */
-function buildUrl(endpoint: 'trending' | 'search', params: {
-  query?: string
-  offset?: string | null
-  limit?: number
-}): string {
+function buildUrl(
+  endpoint: 'trending' | 'search',
+  params: {
+    query?: string
+    offset?: string | null
+    limit?: number
+  }
+): string {
   const url = new URL(`${API_BASE}/${endpoint}`)
   url.searchParams.set('api_key', GIPHY_API_KEY)
   url.searchParams.set('limit', String(params.limit ?? DEFAULT_LIMIT))
@@ -50,10 +47,7 @@ function normalize(res: GiphyResponse | null): GifsResponse | null {
 }
 
 /** Fetch trending GIFs */
-export async function fetchTrending(
-  offset: string | null,
-  opts?: { signal?: AbortSignal }
-) {
+export async function fetchTrending(offset: string | null, opts?: { signal?: AbortSignal }) {
   return normalize(await getJson<GiphyResponse>(buildUrl('trending', { offset }), opts))
 }
 
