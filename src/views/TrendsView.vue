@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useGifsStore } from '@/store'
 import GifList from '@/components/GifList.vue'
@@ -30,6 +30,8 @@ onMounted(() => {
   gifStore.$reset()
   void fetchTrendingGifs()
 })
+
+onBeforeUnmount(() => gifStore.cancel())
 </script>
 
 <template>

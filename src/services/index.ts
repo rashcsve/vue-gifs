@@ -1,2 +1,3 @@
 export * from './types'
-export * from './giphy'
+export type { HttpError, Result } from './http'
+export { fetchGifsFromApi, type GifsError } from './giphy'

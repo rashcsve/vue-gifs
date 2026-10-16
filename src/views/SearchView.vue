@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onBeforeUnmount, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useGifsStore } from '@/store'
 import GifList from '@/components/GifList.vue'
@@ -67,6 +67,12 @@ const onKeydown = (e: KeyboardEvent) => {
 onMounted(() => {
   gifStore.$reset()
   inputEl.value?.focus()
+})
+
+// Abort the in-flight request when leaving the route
+onBeforeUnmount(() => {
+  if (debounceId) window.clearTimeout(debounceId)
+  gifStore.cancel()
 })
 </script>
 

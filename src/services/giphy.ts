@@ -1,5 +1,5 @@
 import { API_BASE, DEFAULT_LANG, DEFAULT_LIMIT, DEFAULT_RATING, GIPHY_API_KEY } from '@/config/api'
-import { getJson } from './http'
+import { getJson, type HttpError, type Result } from './http'
 import type { Category, GifItem, GifsResponse, GiphyGif, GiphyResponse } from './types'
 
 // GIPHY rejects offsets above this value
@@ -46,9 +46,26 @@ export function normalize(res: GiphyResponse | null): GifsResponse | null {
   }
 }
 
+export type GifsError = HttpError | { kind: 'config' } | { kind: 'invalid' }
+
+type GifsResult = Result<GifsResponse, GifsError>
+
+function toGifsResult(res: Result<GiphyResponse>): GifsResult {
+  if (!res.ok) return res
+  try {
+    const data = normalize(res.data)
+    return data ? { ok: true, data } : { ok: false, error: { kind: 'invalid' } }
+  } catch {
+    return { ok: false, error: { kind: 'invalid' } }
+  }
+}
+
 /** Fetch trending GIFs */
-export async function fetchTrending(offset: string | null, opts?: { signal?: AbortSignal }) {
-  return normalize(await getJson<GiphyResponse>(buildUrl('trending', { offset }), opts))
+export async function fetchTrending(
+  offset: string | null,
+  opts?: { signal?: AbortSignal }
+): Promise<GifsResult> {
+  return toGifsResult(await getJson<GiphyResponse>(buildUrl('trending', { offset }), opts))
 }
 
 /** Fetch search results */
@@ -56,23 +73,23 @@ export async function fetchSearch(
   query: string | undefined,
   offset: string | null,
   opts?: { signal?: AbortSignal }
-) {
-  return normalize(await getJson<GiphyResponse>(buildUrl('search', { query, offset }), opts))
+): Promise<GifsResult> {
+  return toGifsResult(await getJson<GiphyResponse>(buildUrl('search', { query, offset }), opts))
 }
 
 export async function fetchGifsFromApi(
   args: { category?: Category; query?: string; offset?: string | null },
   opts?: { signal?: AbortSignal }
-): Promise<GifsResponse | null> {
+): Promise<GifsResult> {
   const { category, query, offset } = args ?? {}
 
   if (!GIPHY_API_KEY) {
     console.error('[GIPHY] Missing VITE_GIPHY_API_KEY in .env.local')
-    return null
+    return { ok: false, error: { kind: 'config' } }
   }
 
   if (category === 'trends') return fetchTrending(offset ?? null, opts)
   if (category === 'search') return fetchSearch(query, offset ?? null, opts)
 
-  return null
+  return { ok: false, error: { kind: 'invalid' } }
 }

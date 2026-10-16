@@ -1,12 +1,12 @@
 // src/store/index.ts
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { fetchGifsFromApi, type Category, type GifsResponse, type GifItem } from '@/services'
+import { fetchGifsFromApi, type Category, type GifItem } from '@/services'
 
 /**
  * Pinia store for GIFs
  * - Handles first-page vs. load-more states
- * - Prevents race conditions via requestId
+ * - Aborts superseded requests and ignores their late responses via requestId
  * - Surfaces human-friendly error messages
  */
 export const useGifsStore = defineStore('gifs', () => {
@@ -19,6 +19,8 @@ export const useGifsStore = defineStore('gifs', () => {
 
   // Tracks the latest request to avoid updating state from out-of-order responses
   let requestId = 0
+  // Aborts the in-flight request when it is superseded or cancelled
+  let controller: AbortController | null = null
 
   // Derived flag: do we have more to load?
   const hasMore = computed(() => Boolean(next.value))
@@ -26,16 +28,24 @@ export const useGifsStore = defineStore('gifs', () => {
   // --- ACTIONS ---
 
   /**
+   * Abort the in-flight request (e.g. on route change) and keep the loaded data.
+   */
+  function cancel() {
+    controller?.abort()
+    controller = null
+    // Invalidate in-flight requests; resetting to 0 would let a new request reuse their ID
+    requestId++
+    _clearLoading()
+  }
+
+  /**
    * Reset store to a clean state (use before starting a new query/category).
    */
   function $reset() {
+    cancel()
     gifs.value = []
-    isLoading.value = false
-    isLoadingMore.value = false
     error.value = null
     next.value = null
-    // Invalidate in-flight requests; resetting to 0 would let a new request reuse their ID
-    requestId++
   }
 
   /**
@@ -72,41 +82,49 @@ export const useGifsStore = defineStore('gifs', () => {
 
     // Unique ID for this request (guards against out-of-order responses)
     const myId = ++requestId
+    controller?.abort()
+    controller = new AbortController()
 
     try {
-      const data = (await fetchGifsFromApi({
-        query,
-        category,
-        offset: next.value ?? null
-      })) as GifsResponse | null
+      const result = await fetchGifsFromApi(
+        { query, category, offset: next.value ?? null },
+        { signal: controller.signal }
+      )
 
       // Ignore outdated responses (if a newer request has been made)
       if (myId !== requestId) return
 
-      // Validate the API response shape (defensive programming)
-      if (!data || !Array.isArray(data.results)) {
-        throw new Error('Invalid API response')
+      if (!result.ok) {
+        if (result.error.kind === 'aborted') return
+        console.error('[gifs] fetch failed:', result.error)
+        error.value = 'Failed to load GIFs.'
+        next.value = null
+        return
       }
 
-      const incoming = data.results ?? []
+      const { results, next: nextOffset } = result.data
 
       // Merge for "load more", replace for first page
-      gifs.value = firstPage ? incoming : [...gifs.value, ...incoming]
-      next.value = data.next ?? null
+      gifs.value = firstPage ? results : [...gifs.value, ...results]
+      next.value = nextOffset
 
       // Show user-friendly "no results" only for the first page
       if (firstPage && gifs.value.length === 0) {
         error.value = 'No GIFs found.'
       }
-    } catch {
+    } catch (err) {
       // Also ignore errors from outdated responses
       if (myId !== requestId) return
 
+      console.error('[gifs] fetch threw:', err)
       error.value = 'Failed to load GIFs.'
       next.value = null
     } finally {
       // Only clear loading if this is still the latest request
-      if (myId === requestId) _clearLoading()
+      if (myId === requestId) {
+        _clearLoading()
+        controller = null
+      }
     }
   }
 
@@ -121,6 +139,7 @@ export const useGifsStore = defineStore('gifs', () => {
 
     // Actions
     $reset,
+    cancel,
     fetchGifs
   }
 })

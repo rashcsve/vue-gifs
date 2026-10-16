@@ -1,12 +1,19 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { API_BASE, DEFAULT_LANG, DEFAULT_LIMIT, DEFAULT_RATING } from '@/config/api'
-import { buildUrl, normalize } from '@/services/giphy'
+import { buildUrl, fetchGifsFromApi, normalize } from '@/services/giphy'
 import type { GiphyGif, GiphyResponse } from '@/services/types'
 import type * as ApiConfig from '@/config/api'
 
+const apiConfig = vi.hoisted(() => ({ key: 'test-key' }))
+
 vi.mock('@/config/api', async (importOriginal) => {
   const actual = await importOriginal<typeof ApiConfig>()
-  return { ...actual, GIPHY_API_KEY: 'test-key' }
+  return {
+    ...actual,
+    get GIPHY_API_KEY() {
+      return apiConfig.key
+    }
+  }
 })
 
 function parse(url: string) {
@@ -147,5 +154,124 @@ describe('normalize', () => {
   it('allows nextOffset exactly 4999 when total allows', () => {
     const res = normalize(response([], { offset: 4987, count: 12, total_count: 100000 }))
     expect(res?.next).toBe('4999')
+  })
+})
+
+describe('fetchGifsFromApi', () => {
+  const fetchMock = vi.fn<typeof fetch>()
+
+  function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Response {
+    return new Response(JSON.stringify(body), init)
+  }
+
+  function calledUrl(): URL {
+    const input = fetchMock.mock.calls[0]?.[0]
+    return new URL(String(input))
+  }
+
+  beforeEach(() => {
+    apiConfig.key = 'test-key'
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    apiConfig.key = 'test-key'
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('fetches trending and returns ok with the normalized page', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(
+        response([gif('a', { fixed_height: { url: 'a.gif' } })], {
+          offset: 0,
+          count: 1,
+          total_count: 100
+        })
+      )
+    )
+    const result = await fetchGifsFromApi({ category: 'trends', offset: null })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const url = calledUrl()
+    expect(`${url.origin}${url.pathname}`).toBe(`${API_BASE}/trending`)
+    expect(url.searchParams.has('offset')).toBe(false)
+    expect(result).toEqual({
+      ok: true,
+      data: { results: [{ id: 'a', title: 'Title a', url: 'a.gif' }], next: '1' }
+    })
+  })
+
+  it('fetches search with the query and offset', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(response([])))
+    const result = await fetchGifsFromApi({ category: 'search', query: 'cats', offset: '24' })
+
+    const url = calledUrl()
+    expect(`${url.origin}${url.pathname}`).toBe(`${API_BASE}/search`)
+    expect(url.searchParams.get('q')).toBe('cats')
+    expect(url.searchParams.get('offset')).toBe('24')
+    expect(result).toEqual({ ok: true, data: { results: [], next: null } })
+  })
+
+  it('returns a config error without calling fetch when the API key is missing', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    apiConfig.key = ''
+    const result = await fetchGifsFromApi({ category: 'trends' })
+
+    expect(result).toEqual({ ok: false, error: { kind: 'config' } })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('returns an invalid error without calling fetch when the category is missing', async () => {
+    const result = await fetchGifsFromApi({ query: 'cats' })
+
+    expect(result).toEqual({ ok: false, error: { kind: 'invalid' } })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('returns an invalid error when the response data is not an array', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        '{"data":{},"pagination":{"offset":0,"count":0,"total_count":0},"meta":{"status":200,"msg":"OK"}}',
+        { status: 200 }
+      )
+    )
+    const result = await fetchGifsFromApi({ category: 'trends' })
+    expect(result).toEqual({ ok: false, error: { kind: 'invalid' } })
+  })
+
+  it('returns an invalid error when pagination is missing', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ data: [] }))
+
+    await expect(fetchGifsFromApi({ category: 'trends' })).resolves.toEqual({
+      ok: false,
+      error: { kind: 'invalid' }
+    })
+  })
+
+  it('propagates HTTP errors from the HTTP layer as-is', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' })
+    )
+    const result = await fetchGifsFromApi({ category: 'search', query: 'cats' })
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: 'http', status: 403, statusText: 'Forbidden' }
+    })
+  })
+
+  it('propagates an aborted request as an aborted error', async () => {
+    fetchMock.mockRejectedValue(new DOMException('aborted', 'AbortError'))
+    const result = await fetchGifsFromApi({ category: 'trends' })
+    expect(result).toEqual({ ok: false, error: { kind: 'aborted' } })
+  })
+
+  it('passes the abort signal to fetch', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(response([])))
+    const controller = new AbortController()
+    await fetchGifsFromApi({ category: 'trends' }, { signal: controller.signal })
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.any(String), { signal: controller.signal })
   })
 })
