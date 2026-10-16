@@ -34,7 +34,8 @@ export const useGifsStore = defineStore('gifs', () => {
     isLoadingMore.value = false
     error.value = null
     next.value = null
-    requestId = 0
+    // Invalidate in-flight requests; resetting to 0 would let a new request reuse their ID
+    requestId++
   }
 
   /**
