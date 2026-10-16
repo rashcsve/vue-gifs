@@ -1,0 +1,151 @@
+import { describe, expect, it, vi } from 'vitest'
+import { API_BASE, DEFAULT_LANG, DEFAULT_LIMIT, DEFAULT_RATING } from '@/config/api'
+import { buildUrl, normalize } from '@/services/giphy'
+import type { GiphyGif, GiphyResponse } from '@/services/types'
+import type * as ApiConfig from '@/config/api'
+
+vi.mock('@/config/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof ApiConfig>()
+  return { ...actual, GIPHY_API_KEY: 'test-key' }
+})
+
+function parse(url: string) {
+  return new URL(url)
+}
+
+function gif(id: string, images: GiphyGif['images'] = {}): GiphyGif {
+  return { id, title: `Title ${id}`, images }
+}
+
+function response(
+  data: GiphyGif[],
+  pagination: GiphyResponse['pagination'] = {
+    offset: 0,
+    count: data.length,
+    total_count: 100
+  }
+): GiphyResponse {
+  return { data, pagination, meta: { status: 200, msg: 'OK' } }
+}
+
+describe('buildUrl', () => {
+  it('uses the trending endpoint path', () => {
+    const url = parse(buildUrl('trending', {}))
+    expect(`${url.origin}${url.pathname}`).toBe(`${API_BASE}/trending`)
+  })
+
+  it('uses the search endpoint path', () => {
+    const url = parse(buildUrl('search', { query: 'cats' }))
+    expect(`${url.origin}${url.pathname}`).toBe(`${API_BASE}/search`)
+  })
+
+  it('sets api_key from config, default limit and rating', () => {
+    const { searchParams } = parse(buildUrl('trending', {}))
+    expect(searchParams.get('api_key')).toBe('test-key')
+    expect(searchParams.get('limit')).toBe(String(DEFAULT_LIMIT))
+    expect(searchParams.get('rating')).toBe(DEFAULT_RATING)
+  })
+
+  it('uses a custom limit when given', () => {
+    const { searchParams } = parse(buildUrl('trending', { limit: 30 }))
+    expect(searchParams.get('limit')).toBe('30')
+  })
+
+  it('sets lang only for search', () => {
+    expect(parse(buildUrl('search', { query: 'cats' })).searchParams.get('lang')).toBe(DEFAULT_LANG)
+    expect(parse(buildUrl('trending', {})).searchParams.has('lang')).toBe(false)
+  })
+
+  it('trims the query', () => {
+    const { searchParams } = parse(buildUrl('search', { query: '  funny cats  ' }))
+    expect(searchParams.get('q')).toBe('funny cats')
+  })
+
+  it.each([
+    ['undefined', undefined],
+    ['empty', ''],
+    ['whitespace', '   ']
+  ])('omits q when the query is %s', (_label, query) => {
+    const { searchParams } = parse(buildUrl('search', { query }))
+    expect(searchParams.has('q')).toBe(false)
+  })
+
+  it('sets offset when given', () => {
+    const { searchParams } = parse(buildUrl('trending', { offset: '24' }))
+    expect(searchParams.get('offset')).toBe('24')
+  })
+
+  it('omits offset when null', () => {
+    const { searchParams } = parse(buildUrl('trending', { offset: null }))
+    expect(searchParams.has('offset')).toBe(false)
+  })
+})
+
+describe('normalize', () => {
+  it('returns null for null input', () => {
+    expect(normalize(null)).toBeNull()
+  })
+
+  it('returns null when data is not an array', () => {
+    const bad: GiphyResponse = JSON.parse(
+      '{"data":{},"pagination":{"offset":0,"count":0,"total_count":0},"meta":{"status":200,"msg":"OK"}}'
+    )
+    expect(normalize(bad)).toBeNull()
+  })
+
+  it('maps GIFs to id, title and url', () => {
+    const res = normalize(response([gif('a', { fixed_height: { url: 'https://x/a.gif' } })]))
+    expect(res?.results).toEqual([{ id: 'a', title: 'Title a', url: 'https://x/a.gif' }])
+  })
+
+  it('falls back fixed_height -> downsized -> original for the image url', () => {
+    const res = normalize(
+      response([
+        gif('fh', {
+          fixed_height: { url: 'fh.gif' },
+          downsized: { url: 'ds.gif' },
+          original: { url: 'or.gif' }
+        }),
+        gif('ds', { downsized: { url: 'ds.gif' }, original: { url: 'or.gif' } }),
+        gif('or', { original: { url: 'or.gif' } })
+      ])
+    )
+    expect(res?.results.map((g) => g.url)).toEqual(['fh.gif', 'ds.gif', 'or.gif'])
+  })
+
+  it('drops GIFs without an image url', () => {
+    const res = normalize(
+      response([
+        gif('none'),
+        gif('empty', { fixed_height: { url: '' } }),
+        gif('ok', { original: { url: 'ok.gif' } })
+      ])
+    )
+    expect(res?.results.map((g) => g.id)).toEqual(['ok'])
+  })
+
+  it('sets next to offset + count when more results remain', () => {
+    const res = normalize(response([], { offset: 12, count: 12, total_count: 100 }))
+    expect(res?.next).toBe('24')
+  })
+
+  it('sets next to null when nextOffset reaches total_count', () => {
+    expect(normalize(response([], { offset: 88, count: 12, total_count: 100 }))?.next).toBeNull()
+    expect(normalize(response([], { offset: 90, count: 12, total_count: 100 }))?.next).toBeNull()
+  })
+
+  it('sets next to null for an empty page (count 0)', () => {
+    const res = normalize(response([], { offset: 0, count: 0, total_count: 100 }))
+    expect(res).toEqual({ results: [], next: null })
+  })
+
+  it('sets next to null when nextOffset is above the 4999 cap', () => {
+    const res = normalize(response([], { offset: 4992, count: 12, total_count: 100000 }))
+    expect(res?.next).toBeNull()
+  })
+
+  it('allows nextOffset exactly 4999 when total allows', () => {
+    const res = normalize(response([], { offset: 4987, count: 12, total_count: 100000 }))
+    expect(res?.next).toBe('4999')
+  })
+})

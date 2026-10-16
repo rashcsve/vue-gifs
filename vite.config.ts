@@ -1,4 +1,5 @@
 // vite.config.ts
+/// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -24,5 +25,8 @@ export default defineConfig(({ mode }) => ({
   },
   esbuild: {
     target: 'es2022'
+  },
+  test: {
+    environment: 'jsdom'
   }
 }))

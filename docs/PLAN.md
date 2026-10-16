@@ -70,3 +70,11 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - `scripts/ai/lint-on-edit.sh`: each edit starts a fresh ESLint (typescript-eslint + vue parser) and Prettier with no `--cache`. Fine for now; add caching (and gitignore `.eslintcache`) if per-edit hooks get slow. Found in 5c.
 - `.codex/hooks.json`: both hooks locate the script with `$(git rev-parse --show-toplevel)`, which is empty outside a git repo and gives a "No such file" error. Only matters if the repo is used without `.git` (e.g. a tarball). Found in 5c.
 - `scripts/ai/`: the hook scripts have no automated tests. Consider bats or a small Vitest spec that pipes sample payloads in once step 6 lands. Found in 5c.
+- `src/store/index.ts:68`: `firstPage` is derived from `!next.value`, and the `catch` sets `next = null`, so retrying after a failed load-more replaces every loaded GIF with page 1. The spec "sets "Failed to load GIFs." and next null when the API rejects" pins the current behaviour; step 10 should change it deliberately. Found in 6.
+- `src/store/index.ts:81`: unneeded `as GifsResponse | null` cast (`fetchGifsFromApi` already returns that type), and `data.results ?? []` at line 90 is dead after the `Array.isArray` check. Step 10. Found in 6.
+- `src/services/giphy.ts:11`: `buildUrl` and `normalize` are exported for tests, so they also leak through the `export *` barrel in `src/services/index.ts`. Narrow the barrel in step 9. Found in 6.
+- `vite.config.ts`: not covered by any tsconfig, so the `test` block is never type-checked. Add a `tsconfig.node.json` (or similar). Found in 6.
+- `tsconfig.tsbuildinfo` is tracked, and every `npm run build` (`vue-tsc -b`) rewrites it. Untrack it and add it to `.gitignore`. Found in 6.
+- `node_modules/nopt`, `abbrev` (via `@vue/test-utils` → `js-beautify`) declare Node `^22.22.2`, giving an EBADENGINE warning on Node 22.19. Harmless (CLI-only deps); goes away once `.nvmrc` pins a newer 22.x. Found in 6.
+- `vite.config.ts`: `test.environment` is `jsdom` globally, which adds ~1s per run for logic-only specs. Switch the default to `node` with per-file `// @vitest-environment jsdom` if the suite gets slow. Found in 6.
+- `~/.npm` cache: the agent sandbox can only write `~/.npm/_logs`, so agent installs need `npm_config_cache=$TMPDIR/npm-cache`. Found in 6.

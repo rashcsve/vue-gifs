@@ -8,7 +8,7 @@ const MAX_OFFSET = 4999
 /**
  * Build a GIPHY endpoint URL safely using the URL API.
  */
-function buildUrl(
+export function buildUrl(
   endpoint: 'trending' | 'search',
   params: {
     query?: string
@@ -35,7 +35,7 @@ function toGifItem(gif: GiphyGif): GifItem | null {
  * Convert a GIPHY response to the app's shape.
  * `next` is the offset of the following page, or null when there is nothing more.
  */
-function normalize(res: GiphyResponse | null): GifsResponse | null {
+export function normalize(res: GiphyResponse | null): GifsResponse | null {
   if (!res || !Array.isArray(res.data)) return null
   const { offset, count, total_count } = res.pagination
   const nextOffset = offset + count
