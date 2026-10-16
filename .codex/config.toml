@@ -1,0 +1,8 @@
+# Project config for Codex. Loaded only after you trust this project in Codex.
+# Shared instructions are in AGENTS.md.
+
+# Ask before anything outside the sandbox (network, writes outside the repo, git commit).
+approval_policy = "on-request"
+
+# Edit inside the repo only. Codex keeps .git read-only here, so commits always need approval.
+sandbox_mode = "workspace-write"

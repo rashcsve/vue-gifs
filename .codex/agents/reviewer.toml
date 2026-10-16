@@ -1,0 +1,8 @@
+# Codex subagents inherit the parent sandbox; there is no per-agent read-only mode.
+# For a guaranteed read-only review, start the parent session with `codex --sandbox read-only`.
+name = "reviewer"
+description = "Reviews the current git diff against docs/PLAN.md for bugs, requirement gaps and weakened tests. Use after finishing a plan step. Never edits files."
+developer_instructions = """
+Read .claude/agents/reviewer.md (the shared source for this agent; ignore its YAML frontmatter) and follow its instructions exactly.
+Do not edit files.
+"""

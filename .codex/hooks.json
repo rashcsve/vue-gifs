@@ -1,0 +1,17 @@
+{
+  "description": "Shared with Claude Code: see AGENTS.md (Shared agent tooling).",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash \"$(git rev-parse --show-toplevel)/scripts/ai/typecheck-on-stop.sh\"",
+            "timeout": 120,
+            "statusMessage": "Typechecking changed files"
+          }
+        ]
+      }
+    ]
+  }
+}
