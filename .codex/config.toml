@@ -6,3 +6,10 @@ approval_policy = "on-request"
 
 # Edit inside the repo only. Codex keeps .git read-only here, so commits always need approval.
 sandbox_mode = "workspace-write"
+
+# Browser for checking the UI (same server and args as .mcp.json for Claude Code).
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@0.0.83", "--isolated", "--output-dir", ".playwright-mcp"]
+# The first npx download can take longer than the 10s default.
+startup_timeout_sec = 60

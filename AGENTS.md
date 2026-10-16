@@ -32,6 +32,7 @@ This file is the shared instruction source for every coding agent (Codex reads i
 - Don't add a dependency without approval. Propose it with its npm link, weekly downloads and maintainer; check it exists first.
 - Keep diffs small. Don't fix things outside the current step; list them under **Found issues** in `docs/PLAN.md`.
 - After each change, run `npm run verify`.
+- For UI changes, check the page yourself with the Playwright MCP before asking the user to. Ask the user to start `npm run dev` (the agent sandbox can't read `.env.local`, so an agent-started server has no API key), then open the URL Vite prints. The MCP uses the installed Google Chrome.
 - If a command fails, show the error and propose a fix. Don't retry blindly.
 - Never commit or push. Propose a Conventional Commit message and let the user commit after review.
 - Never read `.env`, `.env.local` or any other secret file.
@@ -46,5 +47,6 @@ This file is the shared instruction source for every coding agent (Codex reads i
 | Test writer               | `.claude/agents/test-writer.md`     | `test-writer` subagent               | `.codex/agents/test-writer.toml` |
 | Typecheck at end of turn  | `scripts/ai/typecheck-on-stop.sh`   | Stop hook in `.claude/settings.json` | Stop hook in `.codex/hooks.json` |
 | Lint + format per edit    | `scripts/ai/lint-on-edit.sh`        | PostToolUse `Edit\|MultiEdit\|Write` | PostToolUse `apply_patch`        |
+| Browser (Playwright MCP)  | `@playwright/mcp@0.0.83` via npx    | `.mcp.json`                          | `.codex/config.toml`             |
 
 `.claude/skills/*` are symlinks to `.agents/skills/*`, so edit skills only in `.agents/skills/`.

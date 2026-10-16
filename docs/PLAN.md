@@ -40,7 +40,7 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - [x] **6.** Add Vitest, `@vue/test-utils` and jsdom. First tests: `normalize`, `buildUrl` (giphy service) and the `fetchGifs` store action (first page, load more, race guard).
 - [x] **7.** Add a GitHub Actions workflow that runs `npm run verify` on push and PR. Optional: AI PR review with `anthropics/claude-code-action@v1`. Needs: 5b, 6.
 - [x] **8.** Add a `Dockerfile` and `docker-compose.yml` (dev on port 5173, preview on port 4173).
-- [ ] **8b.** Give agents eyes: a Playwright MCP server in `.mcp.json` (Claude) and `.codex/config.toml` (Codex) so they can check the UI in a browser before the UI steps.
+- [x] **8b.** Give agents eyes: a Playwright MCP server in `.mcp.json` (Claude) and `.codex/config.toml` (Codex) so they can check the UI in a browser before the UI steps.
 
 ## Phase 3: Refactor (one PR per step)
 
@@ -84,3 +84,7 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - `Dockerfile:4`: the image tag `node:22.19.0-alpine` duplicates `.nvmrc` by hand, so the two can drift. Docker Scout also reports 6 critical and 60 high vulnerabilities in that image. Bump `.nvmrc` and the tag together (22.22.2+ also clears the EBADENGINE warning), and consider a check that keeps them in sync. Found in 8.
 - `Dockerfile:15`: the dev container runs as root on a bind mount, so on Linux hosts files Vite writes into the checkout (e.g. `vite.config.ts.timestamp-*.mjs`) are root-owned. Fix with `USER node` plus `chown` of `/app` and the `node_modules` volume. Untested because the Docker daemon wasn't running. Found in 8.
 - `docker-compose.yml:17`: the anonymous `node_modules` volume only refreshes with `-V` (`--renew-anon-volumes`). Consider Compose `develop.watch` with `action: rebuild` on `package-lock.json` to remove the footgun. Found in 8.
+- `.claude/settings.json`: `browser_navigate` is allowed and the Playwright MCP server runs outside the Bash sandbox's network allowlist, so an agent can browse any URL without asking. (`browser_evaluate`, `run_code_unsafe`, `file_upload` and `drop` are `ask`.) Found in 8b.
+- `.claude/settings.json`: `enabledMcpjsonServers` auto-starts `npx -y @playwright/mcp@0.0.83` for anyone who opens the repo in Claude Code, while `Bash(npx *)` is `ask`. The exact version pin limits the risk. Found in 8b.
+- `.mcp.json`, `.codex/config.toml`: the `@playwright/mcp` version is pinned in both files by hand, so they can drift. Found in 8b.
+- `.mcp.json`: the server needs Google Chrome installed. Machines without it (and Docker/CI) need `--browser chromium` plus a Playwright browser install, which the agent sandbox can't download. Revisit in step 14. Found in 8b.
