@@ -29,6 +29,7 @@ This file is the shared instruction source for every coding agent (Codex reads i
 
 - Explore first. Before you edit, give a short plan and wait for approval.
 - Work through `docs/PLAN.md` one step at a time; a step can start once its `Needs:` steps are ticked. Read it before starting any work.
+- Logic changes are test-first, with a writer/tester split. The `test-writer` agent writes failing specs from the plan step, and the user approves them. The implementer then makes them pass without touching `*.spec.ts`; if it needs more tests, it asks `test-writer`.
 - Don't add a dependency without approval. Propose it with its npm link, weekly downloads and maintainer; check it exists first.
 - Keep diffs small. Don't fix things outside the current step; list them under **Found issues** in `docs/PLAN.md`.
 - After each change, run `npm run verify`.

@@ -18,8 +18,8 @@ Shared by Claude Code (`/next-step [n]`) and Codex (`$next-step`). Requested ste
 
    **Stop and wait for approval.**
 
-3. If the step changes logic and Vitest exists: spawn the `test-writer` subagent to write failing tests from the plan, run them to confirm they fail, and show them to the user. **Wait for approval of the tests.**
-4. Implement in small edits that follow the conventions in `AGENTS.md`. Don't edit tests to make them pass; if a test looks wrong, stop and ask.
+3. If the step changes logic: spawn the `test-writer` subagent in test-first mode. Give it the plan step text and the agreed public interface (names and signatures), not your implementation approach. Confirm the tests fail for the right reason and show them to the user. Until step 4 is done, red tests and typecheck errors from missing exports are expected; don't fix them by editing the tests. **Wait for approval of the tests.**
+4. Implement in small edits that follow the conventions in `AGENTS.md`. Don't create or edit `*.spec.ts` files. If a test looks wrong, stop and ask. If you find behaviour that has no test, spawn `test-writer` again for it.
 5. Run the `verify` skill. Fix failures that are inside this step. Anything else: show the error and propose a fix. If the same failure survives two fix attempts, stop and report what you tried.
 6. Get the diff reviewed:
    - Spawn the `reviewer` subagent.

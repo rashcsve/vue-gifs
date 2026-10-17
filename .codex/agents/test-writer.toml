@@ -1,6 +1,5 @@
 name = "test-writer"
-description = "Writes Vitest unit and component tests for a given file or function. Use when a plan step changes logic or adds a composable, store or service."
+description = "Writes Vitest unit and component tests, failing tests first (TDD) from a plan step, or coverage for existing code. Use before implementing a plan step that changes logic or adds a composable, store or service. Only edits *.spec.ts files."
 developer_instructions = """
 Read .claude/agents/test-writer.md (the shared source for this agent; ignore its YAML frontmatter) and follow its instructions exactly.
-Only create or edit *.spec.ts files.
 """
