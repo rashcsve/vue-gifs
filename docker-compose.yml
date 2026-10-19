@@ -1,5 +1,5 @@
 # docker compose up --build -V dev   -> http://localhost:5173 (HMR, source bind-mounted)
-# docker compose up --build preview  -> http://localhost:4173 (production build; needs .env.local)
+# docker compose up --build preview  -> http://localhost:4173 (production build; reads GIPHY_API_KEY from .env.local)
 # -V renews the anonymous node_modules volume, so dependency changes reach the dev container.
 services:
   dev:
@@ -20,11 +20,7 @@ services:
     build:
       context: .
       target: preview
-      secrets:
-        - env_local
+    # Runtime env only: the key never enters the image
+    env_file: .env.local
     ports:
       - '127.0.0.1:4173:4173'
-
-secrets:
-  env_local:
-    file: .env.local

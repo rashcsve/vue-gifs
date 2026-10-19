@@ -19,7 +19,7 @@ coverage
 docs
 scripts
 
-# Secrets: the build gets .env.local as a BuildKit secret, never via COPY
+# Secrets: the preview container gets GIPHY_API_KEY via env_file at runtime, never via COPY
 .env*
 Dockerfile
 docker-compose.yml

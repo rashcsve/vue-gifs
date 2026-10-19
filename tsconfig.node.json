@@ -1,0 +1,9 @@
+{
+  "//": "Server-side and build code (Netlify functions, Vite config). The app uses tsconfig.json.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["netlify", "vite.config.ts"]
+}

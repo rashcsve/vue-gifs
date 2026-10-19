@@ -1,4 +1,4 @@
-import { API_BASE, DEFAULT_LANG, DEFAULT_LIMIT, DEFAULT_RATING, GIPHY_API_KEY } from '@/config/api'
+import { API_PROXY_PATH } from '@/config/api'
 import { getJson, type HttpError, type Result } from './http'
 import type { Category, GifItem, GifsResponse, GiphyGif, GiphyResponse } from './types'
 
@@ -6,24 +6,17 @@ import type { Category, GifItem, GifsResponse, GiphyGif, GiphyResponse } from '.
 const MAX_OFFSET = 4999
 
 /**
- * Build a GIPHY endpoint URL safely using the URL API.
+ * Build a URL for the GIPHY proxy (netlify/functions/gifs/gifs.ts).
+ * The proxy adds the API key, limit, rating and lang.
  */
-export function buildUrl(
+function buildProxyUrl(
   endpoint: 'trending' | 'search',
-  params: {
-    query?: string
-    offset?: string | null
-    limit?: number
-  }
+  params: { query?: string; offset?: string | null }
 ): string {
-  const url = new URL(`${API_BASE}/${endpoint}`)
-  url.searchParams.set('api_key', GIPHY_API_KEY)
-  url.searchParams.set('limit', String(params.limit ?? DEFAULT_LIMIT))
-  url.searchParams.set('rating', DEFAULT_RATING)
-  if (endpoint === 'search') url.searchParams.set('lang', DEFAULT_LANG)
-  if (params.query?.trim()) url.searchParams.set('q', params.query.trim())
-  if (params.offset) url.searchParams.set('offset', params.offset)
-  return url.toString()
+  const search = new URLSearchParams({ endpoint })
+  if (params.query?.trim()) search.set('q', params.query.trim())
+  if (params.offset) search.set('offset', params.offset)
+  return `${API_PROXY_PATH}?${search}`
 }
 
 function toGifItem(gif: GiphyGif): GifItem | null {
@@ -46,7 +39,7 @@ export function normalize(res: GiphyResponse | null): GifsResponse | null {
   }
 }
 
-export type GifsError = HttpError | { kind: 'config' } | { kind: 'invalid' }
+export type GifsError = HttpError | { kind: 'invalid' }
 
 type GifsResult = Result<GifsResponse, GifsError>
 
@@ -65,7 +58,7 @@ export async function fetchTrending(
   offset: string | null,
   opts?: { signal?: AbortSignal }
 ): Promise<GifsResult> {
-  return toGifsResult(await getJson<GiphyResponse>(buildUrl('trending', { offset }), opts))
+  return toGifsResult(await getJson<GiphyResponse>(buildProxyUrl('trending', { offset }), opts))
 }
 
 /** Fetch search results */
@@ -74,7 +67,9 @@ export async function fetchSearch(
   offset: string | null,
   opts?: { signal?: AbortSignal }
 ): Promise<GifsResult> {
-  return toGifsResult(await getJson<GiphyResponse>(buildUrl('search', { query, offset }), opts))
+  return toGifsResult(
+    await getJson<GiphyResponse>(buildProxyUrl('search', { query, offset }), opts)
+  )
 }
 
 export async function fetchGifsFromApi(
@@ -82,11 +77,6 @@ export async function fetchGifsFromApi(
   opts?: { signal?: AbortSignal }
 ): Promise<GifsResult> {
   const { category, query, offset } = args ?? {}
-
-  if (!GIPHY_API_KEY) {
-    console.error('[GIPHY] Missing VITE_GIPHY_API_KEY in .env.local')
-    return { ok: false, error: { kind: 'config' } }
-  }
 
   if (category === 'trends') return fetchTrending(offset ?? null, opts)
   if (category === 'search') return fetchSearch(query, offset ?? null, opts)

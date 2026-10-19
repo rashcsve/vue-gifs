@@ -14,7 +14,7 @@ This file is the shared instruction source for every coding agent (Codex reads i
 - `npm test`: unit tests (Vitest; `npm run test:watch` for watch mode)
 - `npm run verify`: every gate above in one go; husky `pre-push` and CI (`.github/workflows/ci.yml`) run the same script
 - `docker compose up --build -V dev`: dev server in Docker on port 5173 (source bind-mounted, HMR; `-V` refreshes `node_modules` after dependency changes)
-- `docker compose up --build preview`: production build served on port 4173 (needs `.env.local`, passed as a BuildKit secret)
+- `docker compose up --build preview`: production build served on port 4173 (reads `GIPHY_API_KEY` from `.env.local` at runtime via `env_file`)
 
 ## Conventions
 

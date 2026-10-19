@@ -602,7 +602,6 @@ describe('usePaginatedGifs', () => {
 
     it.each<[string, GifsError]>([
       ['http', { kind: 'http', status: 500, statusText: 'Server Error' }],
-      ['config', { kind: 'config' }],
       ['invalid', { kind: 'invalid' }],
       ['parse', { kind: 'parse', cause: new SyntaxError('bad json') }]
     ])('sets "Failed to load GIFs." for a %s error', async (_label, error) => {

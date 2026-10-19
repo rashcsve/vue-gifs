@@ -17,14 +17,16 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 FROM deps AS build
 COPY . .
-# .env.local is mounted as a BuildKit secret so the key never lands in an image layer.
-# Vite still inlines it into dist/ (moved server-side in PLAN step 13).
-# required=true: without .env.local the build fails instead of shipping an app with no key.
-RUN --mount=type=secret,id=env_local,target=/app/.env.local,required=true npm run build
+# No secrets at build time: the GIPHY key is only read by the /api/gifs proxy at runtime
+RUN npm run build
 
-# Local preview only, not a production image: it keeps devDependencies because `vite preview` needs vite
+# Local preview only, not a production image: it keeps devDependencies because `vite preview` needs vite.
+# vite.config.ts serves the /api/gifs proxy (netlify/functions/gifs/gifs.ts, which imports src/config).
+# GIPHY_API_KEY comes from docker-compose.yml's env_file at runtime, never from an image layer.
 FROM deps AS preview
 COPY vite.config.ts ./
+COPY netlify ./netlify
+COPY src/config ./src/config
 COPY --from=build /app/dist ./dist
 EXPOSE 4173
 CMD ["npm", "run", "preview"]

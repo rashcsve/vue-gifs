@@ -16,8 +16,10 @@ An application in Vue.js using Vite, Pinia and Vue-router showing gifs via the [
 
 ```sh
 npm install
-cp .env.example .env.local   # then add your free GIPHY API key
+cp .env.example .env.local   # then set GIPHY_API_KEY to your free GIPHY API key
 ```
+
+The key stays on the server: the app calls `/api/gifs`, a Netlify function (`netlify/functions/gifs/gifs.ts`) that adds the key. `npm run dev` and `npm run preview` serve the same function through Vite, so no Netlify CLI is needed. On Netlify, set `GIPHY_API_KEY` in the site's environment variables.
 
 ### Compile and Hot-Reload for Development
 

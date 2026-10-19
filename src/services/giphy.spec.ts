@@ -1,25 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { API_BASE, DEFAULT_LANG, DEFAULT_LIMIT, DEFAULT_RATING } from '@/config/api'
-import { buildUrl, fetchGifsFromApi, normalize } from '@/services/giphy'
+import { API_PROXY_PATH } from '@/config/api'
+import { fetchGifsFromApi, normalize } from '@/services/giphy'
 import type { GiphyGif, GiphyResponse } from '@/services/types'
-import type * as ApiConfig from '@/config/api'
 import { jsonResponse } from '@/test/helpers'
-
-const apiConfig = vi.hoisted(() => ({ key: 'test-key' }))
-
-vi.mock('@/config/api', async (importOriginal) => {
-  const actual = await importOriginal<typeof ApiConfig>()
-  return {
-    ...actual,
-    get GIPHY_API_KEY() {
-      return apiConfig.key
-    }
-  }
-})
-
-function parse(url: string) {
-  return new URL(url)
-}
 
 function gif(id: string, images: GiphyGif['images'] = {}): GiphyGif {
   return { id, title: `Title ${id}`, images }
@@ -35,59 +18,6 @@ function response(
 ): GiphyResponse {
   return { data, pagination, meta: { status: 200, msg: 'OK' } }
 }
-
-describe('buildUrl', () => {
-  it('uses the trending endpoint path', () => {
-    const url = parse(buildUrl('trending', {}))
-    expect(`${url.origin}${url.pathname}`).toBe(`${API_BASE}/trending`)
-  })
-
-  it('uses the search endpoint path', () => {
-    const url = parse(buildUrl('search', { query: 'cats' }))
-    expect(`${url.origin}${url.pathname}`).toBe(`${API_BASE}/search`)
-  })
-
-  it('sets api_key from config, default limit and rating', () => {
-    const { searchParams } = parse(buildUrl('trending', {}))
-    expect(searchParams.get('api_key')).toBe('test-key')
-    expect(searchParams.get('limit')).toBe(String(DEFAULT_LIMIT))
-    expect(searchParams.get('rating')).toBe(DEFAULT_RATING)
-  })
-
-  it('uses a custom limit when given', () => {
-    const { searchParams } = parse(buildUrl('trending', { limit: 30 }))
-    expect(searchParams.get('limit')).toBe('30')
-  })
-
-  it('sets lang only for search', () => {
-    expect(parse(buildUrl('search', { query: 'cats' })).searchParams.get('lang')).toBe(DEFAULT_LANG)
-    expect(parse(buildUrl('trending', {})).searchParams.has('lang')).toBe(false)
-  })
-
-  it('trims the query', () => {
-    const { searchParams } = parse(buildUrl('search', { query: '  funny cats  ' }))
-    expect(searchParams.get('q')).toBe('funny cats')
-  })
-
-  it.each([
-    ['undefined', undefined],
-    ['empty', ''],
-    ['whitespace', '   ']
-  ])('omits q when the query is %s', (_label, query) => {
-    const { searchParams } = parse(buildUrl('search', { query }))
-    expect(searchParams.has('q')).toBe(false)
-  })
-
-  it('sets offset when given', () => {
-    const { searchParams } = parse(buildUrl('trending', { offset: '24' }))
-    expect(searchParams.get('offset')).toBe('24')
-  })
-
-  it('omits offset when null', () => {
-    const { searchParams } = parse(buildUrl('trending', { offset: null }))
-    expect(searchParams.has('offset')).toBe(false)
-  })
-})
 
 describe('normalize', () => {
   it('returns null for null input', () => {
@@ -163,17 +93,15 @@ describe('fetchGifsFromApi', () => {
 
   function calledUrl(): URL {
     const input = fetchMock.mock.calls[0]?.[0]
-    return new URL(String(input))
+    return new URL(String(input), 'http://localhost')
   }
 
   beforeEach(() => {
-    apiConfig.key = 'test-key'
     fetchMock.mockReset()
     vi.stubGlobal('fetch', fetchMock)
   })
 
   afterEach(() => {
-    apiConfig.key = 'test-key'
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
@@ -191,9 +119,14 @@ describe('fetchGifsFromApi', () => {
     const result = await fetchGifsFromApi({ category: 'trends', offset: null })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
+    const input = String(fetchMock.mock.calls[0]?.[0])
+    expect(input.startsWith(`${API_PROXY_PATH}?`)).toBe(true)
     const url = calledUrl()
-    expect(`${url.origin}${url.pathname}`).toBe(`${API_BASE}/trending`)
+    expect(url.pathname).toBe('/api/gifs')
+    expect(url.searchParams.get('endpoint')).toBe('trending')
+    expect(url.searchParams.has('q')).toBe(false)
     expect(url.searchParams.has('offset')).toBe(false)
+    expect(url.searchParams.has('api_key')).toBe(false)
     expect(result).toEqual({
       ok: true,
       data: { results: [{ id: 'a', title: 'Title a', url: 'a.gif' }], next: '1' }
@@ -205,19 +138,34 @@ describe('fetchGifsFromApi', () => {
     const result = await fetchGifsFromApi({ category: 'search', query: 'cats', offset: '24' })
 
     const url = calledUrl()
-    expect(`${url.origin}${url.pathname}`).toBe(`${API_BASE}/search`)
+    expect(url.pathname).toBe('/api/gifs')
+    expect(url.searchParams.get('endpoint')).toBe('search')
     expect(url.searchParams.get('q')).toBe('cats')
     expect(url.searchParams.get('offset')).toBe('24')
+    expect(url.searchParams.has('api_key')).toBe(false)
     expect(result).toEqual({ ok: true, data: { results: [], next: null } })
   })
 
-  it('returns a config error without calling fetch when the API key is missing', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    apiConfig.key = ''
-    const result = await fetchGifsFromApi({ category: 'trends' })
+  it('trims the search query and omits q when it is blank', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(response([])))
+    await fetchGifsFromApi({ category: 'search', query: '  funny cats  ' })
+    expect(calledUrl().searchParams.get('q')).toBe('funny cats')
 
-    expect(result).toEqual({ ok: false, error: { kind: 'config' } })
-    expect(fetchMock).not.toHaveBeenCalled()
+    fetchMock.mockClear()
+    fetchMock.mockResolvedValue(jsonResponse(response([])))
+    await fetchGifsFromApi({ category: 'search', query: '   ' })
+    expect(calledUrl().searchParams.has('q')).toBe(false)
+  })
+
+  it('leaves limit, rating and lang to the server', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(response([])))
+    await fetchGifsFromApi({ category: 'search', query: 'cats' })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const { searchParams } = calledUrl()
+    expect(searchParams.has('limit')).toBe(false)
+    expect(searchParams.has('rating')).toBe(false)
+    expect(searchParams.has('lang')).toBe(false)
   })
 
   it('returns an invalid error without calling fetch when the category is missing', async () => {
