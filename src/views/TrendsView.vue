@@ -32,6 +32,7 @@ onMounted(() => void load())
     :is-loading="isLoading"
     :is-loading-more="isLoadingMore"
     :has-more="hasMore"
+    :paused="!!error"
     @load-more="loadMore"
   />
 </template>

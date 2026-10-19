@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import Gif from '@/components/GifItem.vue'
 import type { GifItem } from '@/services'
 
@@ -9,57 +9,70 @@ const props = defineProps<{
   isLoading: boolean
   isLoadingMore: boolean
   hasMore: boolean
+  /** Stop loading more (e.g. after a failed request) until it turns false again */
+  paused?: boolean
 }>()
 
 // EMITS
 const emit = defineEmits<{ (e: 'loadMore'): void }>()
 
 // REFS
-const listEl = ref<HTMLElement | null>(null)
+const sentinel = ref<HTMLElement | null>(null)
 const observer = ref<IntersectionObserver | null>(null)
+
+const canLoadMore = computed(
+  () => props.hasMore && !props.isLoading && !props.isLoadingMore && !props.paused
+)
 
 // METHODS
 /**
- * Observer callback:
- * - When the observed sentinel item enters the viewport, unobserve it and ask parent to fetch more.
- * - Guard against concurrent requests and when there's no more data.
+ * Observer callback: when the sentinel below the list enters the viewport, ask the parent
+ * for the next page. The watcher below decides when the sentinel is observed.
  */
-const onElementObserved: IntersectionObserverCallback = (entries, io) => {
-  for (const entry of entries) {
-    if (!entry.isIntersecting) continue
-    io.unobserve(entry.target)
-
-    if (props.isLoading || props.isLoadingMore || !props.hasMore) continue
-
-    emit('loadMore')
-  }
+const onSentinelObserved: IntersectionObserverCallback = (entries) => {
+  if (canLoadMore.value && entries.some((entry) => entry.isIntersecting)) emit('loadMore')
 }
 
 onMounted(() => {
-  observer.value = new IntersectionObserver(onElementObserved, {
+  observer.value = new IntersectionObserver(onSentinelObserved, {
     root: null,
     rootMargin: '300px 0px 300px 0px',
     threshold: 0.1
   })
 })
 
+/**
+ * Observe the sentinel whenever another page may load, and stop observing while loading,
+ * paused or when there is nothing more. Re-observing reports a visible sentinel at once,
+ * so a short page keeps loading until the viewport is filled.
+ */
+watch(
+  [observer, sentinel, canLoadMore],
+  ([io, el, can], [, prevEl]) => {
+    if (!io) return
+    if (prevEl && prevEl !== el) io.unobserve(prevEl)
+    if (!el) return
+    if (can) io.observe(el)
+    else io.unobserve(el)
+  },
+  { flush: 'post' }
+)
+
 onBeforeUnmount(() => {
   observer.value?.disconnect()
   observer.value = null
 })
-
-const isLastIndex = (i: number) => i === props.gifs.length - 1
-
-const keyOf = (gif: unknown, idx: number) => (gif as { id?: string })?.id ?? idx
 </script>
 
 <template>
   <p v-if="isLoading" class="mt-4 text-center">Loading…</p>
 
-  <section v-else ref="listEl" class="mt-4 flex flex-wrap justify-center md:justify-between">
-    <div v-for="(gif, index) in gifs" :key="keyOf(gif, index)">
-      <Gif :gif="gif" :observer="isLastIndex(index) && hasMore ? observer : null" />
+  <section v-else class="mt-4 flex flex-wrap justify-center md:justify-between">
+    <div v-for="gif in gifs" :key="gif.id">
+      <Gif :gif="gif" />
     </div>
+
+    <div ref="sentinel" class="w-full h-px" aria-hidden="true" />
 
     <p v-if="isLoadingMore" class="w-full text-center opacity-70">Loading more…</p>
   </section>

@@ -220,6 +220,26 @@ describe('SearchView', () => {
       expect(wrapper.text()).not.toContain('Failed to load GIFs.')
     })
 
+    it('does not call the API again on intersection after a failed load-more', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      fetchMock.mockResolvedValueOnce(ok(page(['a', 'b'], '2')))
+      fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
+      const wrapper = mountView()
+      await type(wrapper, 'cats')
+      await press(wrapper, 'Enter')
+
+      intersectAll()
+      await flushPromises()
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(tryAgain(wrapper)).toBeDefined()
+
+      intersectAll()
+      await flushPromises()
+
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(titles(wrapper)).toEqual(['Title a', 'Title b'])
+    })
+
     it('refetches the first page after a failed first page', async () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       fetchMock.mockResolvedValueOnce(NETWORK_ERROR)

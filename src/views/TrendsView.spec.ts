@@ -36,6 +36,10 @@ function tryAgain(wrapper: VueWrapper) {
   return wrapper.findAll('button').find((b) => b.text() === 'Try again')
 }
 
+function intersectAll(): void {
+  FakeObserver.instances.forEach((o) => o.intersectAll())
+}
+
 describe('TrendsView', () => {
   beforeEach(() => {
     fetchMock.mockReset()
@@ -101,6 +105,38 @@ describe('TrendsView', () => {
     wrapper.unmount()
 
     expect(signalOf(0)?.aborted).toBe(true)
+  })
+
+  it('does not call the API again on intersection after a failed load-more until "Try again" succeeds', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    fetchMock.mockResolvedValueOnce(ok(page(['a', 'b'], '2')))
+    fetchMock.mockResolvedValueOnce(fail({ kind: 'network', cause: new TypeError('offline') }))
+    const wrapper = track(mount(TrendsView))
+    await flushPromises()
+
+    intersectAll()
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('Failed to load GIFs.')
+    expect(tryAgain(wrapper)).toBeDefined()
+
+    // Sentinel still on screen: no automatic retry
+    intersectAll()
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    // Manual retry succeeds, then scrolling loads the next page again
+    fetchMock.mockResolvedValueOnce(ok(page(['c'], '3')))
+    await tryAgain(wrapper)?.trigger('click')
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(titles(wrapper)).toEqual(['Title a', 'Title b', 'Title c'])
+
+    fetchMock.mockResolvedValueOnce(ok(page(['d'], null)))
+    intersectAll()
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(titles(wrapper)).toEqual(['Title a', 'Title b', 'Title c', 'Title d'])
   })
 
   it('does not leak trending GIFs into a SearchView mounted afterwards', async () => {
