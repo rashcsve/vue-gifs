@@ -19,7 +19,11 @@ npm install
 cp .env.example .env.local   # then set GIPHY_API_KEY to your free GIPHY API key
 ```
 
-The key stays on the server: the app calls `/api/gifs`, a Netlify function (`netlify/functions/gifs/gifs.ts`) that adds the key. `npm run dev` and `npm run preview` serve the same function through Vite, so no Netlify CLI is needed. On Netlify, set `GIPHY_API_KEY` in the site's environment variables.
+The key stays on the server: the app calls `/api/gifs`, a Netlify function (`netlify/functions/gifs/gifs.ts`) that adds the key. `npm run dev` and `npm run preview` serve the same function through Vite, so no Netlify CLI is needed.
+
+### Deploy
+
+Netlify builds from GitHub (`netlify.toml`): `main` deploys to production, and every pull request gets a deploy preview link. Set `GIPHY_API_KEY` as a secret in the site's environment variables, with the Functions scope, for the Production and Deploy Preview contexts. PRs from forks don't get secrets by default, so their previews can't load GIFs.
 
 ### Compile and Hot-Reload for Development
 

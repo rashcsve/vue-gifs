@@ -55,7 +55,7 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - [x] **14.** Add Playwright end-to-end tests for trends loading, search and infinite scroll. Needs: 8b, 12.
 - [x] **15.** Accessibility pass (focus states, alt text, live regions) and a Lighthouse check. Needs: 11.
 - [ ] **16.** Rewrite the README: architecture diagram, decisions and trade-offs, how AI tools were used (Claude Code + Codex setup from `AGENTS.md`), demo link. Needs: 17.
-- [ ] **17.** Deploy, with a preview link for each PR. Needs: 7, 13.
+- [x] **17.** Deploy, with a preview link for each PR. Needs: 7, 13.
 
 ## Found issues
 
@@ -107,7 +107,8 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - `netlify/functions/gifs/gifs.ts`: the response is always labelled `content-type: application/json`, even when GIPHY returns something else (e.g. an HTML 503 from an edge). The client parses it as JSON anyway, so it ends up as a `parse` error. Found in 13.
 - `netlify/functions/gifs/gifs.ts`: when the client cancels (debounce, route change), the upstream fetch rejects with `AbortError` and the function logs "GIPHY request failed" and returns 502 to nobody. Skip the log when `req.signal.aborted`; needs a spec. Found in 13.
 - `vite.config.ts`: the `giphyProxy` dev/preview middleware (exact path match, `originalUrl`, abort on close, `.catch(next)`) has no automated test. Found in 13. Not covered by 14 either: the e2e specs fulfil `/api/gifs` with `page.route` in the browser, so the middleware never runs. Needs a server-side check with a stubbed upstream.
-- `netlify.toml`: that a function's `config.path` (`/api/gifs`) wins over the `/* → /index.html` SPA rewrite is per Netlify's docs, but untested here. Check on the first deploy preview in step 17. Found in 13.
+- `netlify.toml`: that a function's `config.path` (`/api/gifs`) wins over the `/* → /index.html` SPA rewrite is per Netlify's docs, but untested here. Check on the first deploy preview in step 17. Found in 13. Done in 17: on the first deploy preview, `/api/gifs?endpoint=trending` returns GIPHY JSON (no `api_key` in it) and a deep link to `/search?q=cats` loads the app.
+- `netlify.toml`: Netlify only builds; it doesn't wait for CI, so a PR preview (and a `main` deploy) can go live while `verify` or e2e is failing. Fine for a demo; if it matters, turn on Netlify's "wait for GitHub checks" or deploy from the CI workflow. Found in 17.
 - `npm run test:e2e`: the 16 mocked specs take ~44s locally, though the build is ~2.5s and the deliberate settles (`expectRequestCountToStay`, 700 ms × 4) only ~3s. Cause not measured (the agent sandbox can't launch Chrome); get per-test durations with `--reporter=json` and check the `page.clock` specs and worker count. Found in 14. Addressed after a code review, still unmeasured: headless shell instead of branded Chrome, `workers: '75%'`, per-case settles (`SETTLE_MS`, 3.5s → 1.3s), safety-net route limited to non-local URLs, `vite` called directly.
 - `e2e/*.spec.ts`: the 800×500 viewport assumes 12 GIFs overflow it, so the first page doesn't trigger load-more on its own. Exact request-count assertions (e.g. `[{ offset: 0 }]`) break for unrelated reasons if a CSS change makes cards shorter. Found in 14.
 - `.github/workflows/ci.yml`: the `e2e` job repeats `npm ci` and the build that `verify` already does, and downloads Chromium every run (cache `~/.cache/ms-playwright` keyed on the Playwright version). Cache, `--only-shell` and a separate build step added after a code review; the repeated `npm ci` and build remain. `actions/upload-artifact@v4` lags the `@v6` checkout/setup-node. Found in 14.

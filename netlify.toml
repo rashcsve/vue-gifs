@@ -1,8 +1,15 @@
-# GIPHY_API_KEY must be set in the Netlify site's environment variables (Functions scope).
+# Deployed by Netlify's Git integration: `main` → production, each PR → a deploy preview.
+# GIPHY_API_KEY must be set in the site's environment variables (Functions scope)
+# for the Production and Deploy Preview contexts.
 # Functions are picked up from netlify/functions/ (gifs/gifs.ts serves /api/gifs).
+# The build's Node version comes from .nvmrc; CI (not Netlify) runs the quality gates.
 [build]
   command = "npm run build"
   publish = "dist"
+
+[build.environment]
+  # `prepare` runs husky on npm install; git hooks are useless on the build image
+  HUSKY = "0"
 
 # SPA fallback: vue-router uses HTML5 history, so deep links need index.html.
 # Functions with a `config.path` are matched before redirects.
