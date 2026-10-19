@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { storeToRefs } from 'pinia'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import Gif from '@/components/GifItem.vue'
-import { useGifsStore } from '@/store'
+import type { GifItem } from '@/services'
+
+// PROPS
+const props = defineProps<{
+  gifs: GifItem[]
+  isLoading: boolean
+  isLoadingMore: boolean
+  hasMore: boolean
+}>()
 
 // EMITS
-const emit = defineEmits<{ (e: 'fetchGifs'): void }>()
-
-// STORE
-const gifStore = useGifsStore()
-const { gifs, isLoading, isLoadingMore, error, hasMore } = storeToRefs(gifStore)
+const emit = defineEmits<{ (e: 'loadMore'): void }>()
 
 // REFS
 const listEl = ref<HTMLElement | null>(null)
@@ -26,9 +29,9 @@ const onElementObserved: IntersectionObserverCallback = (entries, io) => {
     if (!entry.isIntersecting) continue
     io.unobserve(entry.target)
 
-    if (isLoading.value || isLoadingMore.value || !hasMore.value) continue
+    if (props.isLoading || props.isLoadingMore || !props.hasMore) continue
 
-    emit('fetchGifs')
+    emit('loadMore')
   }
 }
 
@@ -45,21 +48,16 @@ onBeforeUnmount(() => {
   observer.value = null
 })
 
-const items = computed(() => gifs.value ?? [])
-const isLastIndex = (i: number) => i === items.value.length - 1
+const isLastIndex = (i: number) => i === props.gifs.length - 1
 
 const keyOf = (gif: unknown, idx: number) => (gif as { id?: string })?.id ?? idx
 </script>
 
 <template>
-  <p v-if="error" class="mt-4 text-red-600 text-center">
-    {{ error }}
-  </p>
-
-  <p v-else-if="isLoading" class="mt-4 text-center">Loading…</p>
+  <p v-if="isLoading" class="mt-4 text-center">Loading…</p>
 
   <section v-else ref="listEl" class="mt-4 flex flex-wrap justify-center md:justify-between">
-    <div v-for="(gif, index) in items" :key="keyOf(gif, index)">
+    <div v-for="(gif, index) in gifs" :key="keyOf(gif, index)">
       <Gif :gif="gif" :observer="isLastIndex(index) && hasMore ? observer : null" />
     </div>
 

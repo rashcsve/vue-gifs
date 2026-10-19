@@ -1,16 +1,25 @@
 <script setup lang="ts">
 import { ref, onBeforeUnmount, onMounted } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useGifsStore } from '@/store'
+import { usePaginatedGifs } from '@/composables/usePaginatedGifs'
 import GifList from '@/components/GifList.vue'
 
-// STORE
-const gifStore = useGifsStore()
-const { gifs, isLoading, isLoadingMore, error } = storeToRefs(gifStore)
+// STATE (cancelled automatically when the view unmounts)
+const {
+  gifs,
+  isLoading,
+  isLoadingMore,
+  hasMore,
+  error,
+  isEmpty,
+  query,
+  load,
+  loadMore,
+  retry,
+  reset
+} = usePaginatedGifs('search')
 
 // REFS
 const searchQuery = ref<string>('')
-const lastQueried = ref<string>('') // remembers the last query we fetched
 let debounceId: number | undefined
 const inputEl = ref<HTMLInputElement | null>(null)
 
@@ -19,33 +28,28 @@ const handleSearchInput = () => {
   if (debounceId) window.clearTimeout(debounceId)
 
   debounceId = window.setTimeout(() => {
-    void fetchGifs()
+    search()
   }, 500)
 }
 
 /**
- * Fetch search results for the current query.
- * - If query changed since last fetch → reset store for a clean first page
- * - Uses store's pagination for subsequent "Load more" calls
- * - Guard against concurrent requests
+ * Start a new search for the current input.
+ * - An empty input clears the results instead of calling the API
+ * - The same query is not fetched again; if its last request failed, that request is retried
  */
-const fetchGifs = async () => {
+const search = () => {
   const q = searchQuery.value.trim()
 
-  // If query string changed, clear previous results and pagination
-  if (q !== lastQueried.value) {
-    gifStore.$reset()
-    lastQueried.value = q
+  if (!q) {
+    reset()
+    return
+  }
+  if (q === query.value) {
+    if (error.value) void retry()
+    return
   }
 
-  // Avoid overlapping requests
-  if (isLoading.value || isLoadingMore.value) return
-
-  try {
-    await gifStore.fetchGifs({ query: q, category: 'search' })
-  } catch (e) {
-    console.error('[fetchGifs(search)]', e)
-  }
+  void load(q)
 }
 
 /**
@@ -55,24 +59,19 @@ const fetchGifs = async () => {
 const onKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Enter') {
     if (debounceId) window.clearTimeout(debounceId)
-    void fetchGifs()
+    search()
   } else if (e.key === 'Escape') {
     searchQuery.value = ''
-    gifStore.$reset()
-    lastQueried.value = ''
+    reset()
   }
 }
 
-// Focus input on mount and start from a clean slate
 onMounted(() => {
-  gifStore.$reset()
   inputEl.value?.focus()
 })
 
-// Abort the in-flight request when leaving the route
 onBeforeUnmount(() => {
   if (debounceId) window.clearTimeout(debounceId)
-  gifStore.cancel()
 })
 </script>
 
@@ -97,24 +96,26 @@ onBeforeUnmount(() => {
   <div class="sr-only" aria-live="polite">
     <span v-if="isLoading || isLoadingMore">Loading…</span>
     <span v-else-if="error">{{ error }}</span>
-    <span v-else-if="!isLoading && !isLoadingMore && gifs.length === 0 && !!searchQuery">
-      No results for "{{ searchQuery }}"
-    </span>
+    <span v-else-if="isEmpty">No results for "{{ query }}"</span>
   </div>
 
   <p v-if="error" class="mt-3 text-red-600">
     {{ error }}
-    <button class="underline ml-2" :disabled="isLoading || isLoadingMore" @click="fetchGifs">
+    <button class="underline ml-2" :disabled="isLoading || isLoadingMore" @click="retry">
       Try again
     </button>
   </p>
 
-  <p
-    v-else-if="!isLoading && !isLoadingMore && gifs.length === 0 && !!searchQuery"
-    class="mt-3 opacity-70"
-  >
-    No results for “{{ searchQuery }}”. Try a different keyword.
+  <p v-else-if="isEmpty" class="mt-3 opacity-70">
+    No results for “{{ query }}”. Try a different keyword.
   </p>
 
-  <GifList class="mt-4" @fetch-gifs="fetchGifs" />
+  <GifList
+    class="mt-4"
+    :gifs="gifs"
+    :is-loading="isLoading"
+    :is-loading-more="isLoadingMore"
+    :has-more="hasMore"
+    @load-more="loadMore"
+  />
 </template>

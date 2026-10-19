@@ -49,3 +49,47 @@ export function fail(error: GifsError): GifsResult {
 export function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Response {
   return new Response(JSON.stringify(body), init)
 }
+
+/**
+ * Minimal IntersectionObserver stub: records observed elements so a test can
+ * report them as intersecting by calling the component's callback.
+ * Install with `vi.stubGlobal('IntersectionObserver', FakeObserver)` and reset
+ * `FakeObserver.instances` before each test.
+ */
+export class FakeObserver implements IntersectionObserver {
+  static instances: FakeObserver[] = []
+
+  readonly root = null
+  readonly rootMargin = ''
+  readonly thresholds: readonly number[] = []
+  readonly scrollMargin = ''
+  readonly observed = new Set<Element>()
+
+  constructor(private readonly callback: IntersectionObserverCallback) {
+    FakeObserver.instances.push(this)
+  }
+
+  observe(target: Element): void {
+    this.observed.add(target)
+  }
+
+  unobserve(target: Element): void {
+    this.observed.delete(target)
+  }
+
+  disconnect(): void {
+    this.observed.clear()
+  }
+
+  takeRecords(): IntersectionObserverEntry[] {
+    return []
+  }
+
+  /** Report every currently observed element as intersecting */
+  intersectAll(): void {
+    const entries = [...this.observed].map(
+      (target) => ({ target, isIntersecting: true }) as IntersectionObserverEntry
+    )
+    if (entries.length) this.callback(entries, this)
+  }
+}

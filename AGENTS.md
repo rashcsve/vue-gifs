@@ -18,7 +18,7 @@ This file is the shared instruction source for every coding agent (Codex reads i
 
 ## Conventions
 
-- Vue 3 `<script setup lang="ts">`, Pinia setup stores, Tailwind v4 utility classes, `@/` imports.
+- Vue 3 `<script setup lang="ts">`, composables in `src/composables/` for per-page state (Pinia setup stores only for state shared across pages), Tailwind v4 utility classes, `@/` imports.
 - No `any` and no unneeded casts.
 - Tests sit next to their source as `*.spec.ts` (Vitest, `@vue/test-utils`, jsdom). Never call the real GIPHY API in tests.
 - Tests change only when expected behaviour changes, and the user decides that. Never delete, skip or loosen an assertion to go green.

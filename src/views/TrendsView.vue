@@ -1,37 +1,13 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useGifsStore } from '@/store'
+import { onMounted } from 'vue'
+import { usePaginatedGifs } from '@/composables/usePaginatedGifs'
 import GifList from '@/components/GifList.vue'
 
-// STORE
-const gifStore = useGifsStore()
+// STATE (cancelled automatically when the view unmounts)
+const { gifs, isLoading, isLoadingMore, hasMore, error, isEmpty, load, loadMore, retry } =
+  usePaginatedGifs('trends')
 
-// REFS
-const { gifs, isLoading, isLoadingMore, error } = storeToRefs(gifStore)
-
-// METHODS
-/**
- * Fetch trending GIFs (first page or "load more" depending on store.next).
- * - Guards against concurrent requests (first-page or load-more).
- * - Leaves user-facing messaging to the template via `error` string.
- */
-const fetchTrendingGifs = async () => {
-  if (isLoading.value || isLoadingMore.value) return
-
-  try {
-    await gifStore.fetchGifs({ category: 'trends' as const })
-  } catch (e) {
-    console.error('[fetchTrendingGifs]', e)
-  }
-}
-
-onMounted(() => {
-  gifStore.$reset()
-  void fetchTrendingGifs()
-})
-
-onBeforeUnmount(() => gifStore.cancel())
+onMounted(() => void load())
 </script>
 
 <template>
@@ -44,18 +20,18 @@ onBeforeUnmount(() => gifStore.cancel())
 
   <p v-if="error" class="mb-3 text-red-600">
     {{ error }}
-    <button
-      class="underline ml-2"
-      :disabled="isLoading || isLoadingMore"
-      @click="fetchTrendingGifs"
-    >
+    <button class="underline ml-2" :disabled="isLoading || isLoadingMore" @click="retry">
       Try again
     </button>
   </p>
 
-  <p v-else-if="!isLoading && !isLoadingMore && gifs.length === 0" class="opacity-70 mb-3">
-    No trending GIFs right now. Please try again.
-  </p>
+  <p v-else-if="isEmpty" class="opacity-70 mb-3">No trending GIFs right now. Please try again.</p>
 
-  <GifList @fetch-gifs="fetchTrendingGifs" />
+  <GifList
+    :gifs="gifs"
+    :is-loading="isLoading"
+    :is-loading-more="isLoadingMore"
+    :has-more="hasMore"
+    @load-more="loadMore"
+  />
 </template>
