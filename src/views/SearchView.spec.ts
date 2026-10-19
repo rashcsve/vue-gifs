@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import SearchView from '@/views/SearchView.vue'
+import { RouteName } from '@/router/names'
 import { fetchGifsFromApi } from '@/services'
 import { deferred, fail, FakeObserver, ok, page, type GifsResult } from '@/test/helpers'
 
@@ -22,14 +24,45 @@ function firstPage(query: string) {
 
 const wrappers: VueWrapper[] = []
 
-function mountView(): VueWrapper {
-  const wrapper = mount(SearchView)
+/** Router of the most recent mountView() */
+let router: Router
+
+function makeRouter(): Router {
+  return createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/', name: RouteName.Trends, component: { render: () => null } },
+      { path: '/search', name: RouteName.Search, component: SearchView }
+    ]
+  })
+}
+
+/**
+ * Mount SearchView with a memory router at `path`.
+ * `from`, if given, is visited first so history has an entry before the search page.
+ */
+async function mountView(path = '/search', from?: string): Promise<VueWrapper> {
+  router = makeRouter()
+  if (from) await router.push(from)
+  await router.push(path)
+  await router.isReady()
+  const wrapper = mount(SearchView, { global: { plugins: [router] } })
   wrappers.push(wrapper)
+  await flushPromises()
   return wrapper
 }
 
+/** Current route query */
+function routeQuery() {
+  return router.currentRoute.value.query
+}
+
+function inputValue(wrapper: VueWrapper): string {
+  return input(wrapper).element.value
+}
+
 function input(wrapper: VueWrapper) {
-  return wrapper.get('input[aria-label="Search GIFs"]')
+  return wrapper.get<HTMLInputElement>('input[aria-label="Search GIFs"]')
 }
 
 /** Type into the search box (fires the input event that starts the debounce) */
@@ -82,7 +115,7 @@ describe('SearchView', () => {
   describe('debounce', () => {
     it('calls the API once with the trimmed query 500 ms after typing', async () => {
       fetchMock.mockResolvedValue(ok(page(['a', 'b'], null)))
-      const wrapper = mountView()
+      const wrapper = await mountView()
 
       await type(wrapper, '  cats  ')
       await wait(499)
@@ -96,7 +129,7 @@ describe('SearchView', () => {
 
     it('restarts the debounce when typing again within 500 ms', async () => {
       fetchMock.mockResolvedValue(ok(page(['a'], null)))
-      const wrapper = mountView()
+      const wrapper = await mountView()
 
       await type(wrapper, 'ca')
       await wait(300)
@@ -113,7 +146,7 @@ describe('SearchView', () => {
   describe('keyboard', () => {
     it('searches immediately on Enter without waiting for the debounce', async () => {
       fetchMock.mockResolvedValue(ok(page(['a'], null)))
-      const wrapper = mountView()
+      const wrapper = await mountView()
 
       await type(wrapper, ' cats ')
       await press(wrapper, 'Enter')
@@ -128,14 +161,14 @@ describe('SearchView', () => {
 
     it('clears the input and the results on Escape without calling the API', async () => {
       fetchMock.mockResolvedValue(ok(page(['a'], null)))
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'cats')
       await press(wrapper, 'Enter')
       expect(titles(wrapper)).toEqual(['Title a'])
 
       await press(wrapper, 'Escape')
 
-      expect((input(wrapper).element as HTMLInputElement).value).toBe('')
+      expect(input(wrapper).element.value).toBe('')
       expect(titles(wrapper)).toEqual([])
       await wait(500)
       expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -145,7 +178,7 @@ describe('SearchView', () => {
   describe('empty input', () => {
     it('clears the results and does not call the API after the debounce', async () => {
       fetchMock.mockResolvedValue(ok(page(['a'], null)))
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'cats')
       await press(wrapper, 'Enter')
       expect(titles(wrapper)).toEqual(['Title a'])
@@ -160,7 +193,7 @@ describe('SearchView', () => {
 
     it('clears the results and does not call the API on Enter', async () => {
       fetchMock.mockResolvedValue(ok(page(['a'], null)))
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'cats')
       await press(wrapper, 'Enter')
 
@@ -175,7 +208,7 @@ describe('SearchView', () => {
   describe('same query again', () => {
     it('does not call the API again after a successful search', async () => {
       fetchMock.mockResolvedValue(ok(page(['a'], '1')))
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'cats')
       await press(wrapper, 'Enter')
 
@@ -190,7 +223,7 @@ describe('SearchView', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       fetchMock.mockResolvedValueOnce(ok(page(['a', 'b'], '2')))
       fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'cats')
       await press(wrapper, 'Enter')
 
@@ -224,7 +257,7 @@ describe('SearchView', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       fetchMock.mockResolvedValueOnce(ok(page(['a', 'b'], '2')))
       fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'cats')
       await press(wrapper, 'Enter')
 
@@ -244,7 +277,7 @@ describe('SearchView', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
       fetchMock.mockResolvedValueOnce(ok(page(['a'], null)))
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'cats')
       await press(wrapper, 'Enter')
       expect(wrapper.text()).toContain('Failed to load GIFs.')
@@ -261,7 +294,7 @@ describe('SearchView', () => {
   describe('empty results', () => {
     it('shows one visible "No results" message for the fetched query and no error', async () => {
       fetchMock.mockResolvedValue(ok(page([], null)))
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'zzz')
       await press(wrapper, 'Enter')
 
@@ -275,7 +308,7 @@ describe('SearchView', () => {
 
     it('keeps showing the fetched query while a new query is typed, before the debounce fires', async () => {
       fetchMock.mockResolvedValue(ok(page([], null)))
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'zzz')
       await press(wrapper, 'Enter')
 
@@ -290,7 +323,7 @@ describe('SearchView', () => {
     })
 
     it('shows no "No results" message before any search has run', async () => {
-      const wrapper = mountView()
+      const wrapper = await mountView()
       expect(wrapper.text()).not.toContain('No results')
 
       await type(wrapper, 'zzz')
@@ -306,7 +339,7 @@ describe('SearchView', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
       fetchMock.mockResolvedValueOnce(ok(page(['a'], null)))
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'cats')
       await press(wrapper, 'Enter')
 
@@ -329,7 +362,7 @@ describe('SearchView', () => {
   describe('unmount', () => {
     it('aborts the in-flight request', async () => {
       fetchMock.mockReturnValueOnce(deferred<GifsResult>().promise)
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'cats')
       await press(wrapper, 'Enter')
       expect(signalOf(0)?.aborted).toBe(false)
@@ -341,7 +374,7 @@ describe('SearchView', () => {
     })
 
     it('does not search after unmount when the debounce was pending', async () => {
-      const wrapper = mountView()
+      const wrapper = await mountView()
       await type(wrapper, 'cats')
 
       wrappers.splice(wrappers.indexOf(wrapper), 1)
@@ -349,6 +382,231 @@ describe('SearchView', () => {
       await wait(500)
 
       expect(fetchMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('URL query (?q=)', () => {
+    it('fills the input and fetches the first page immediately when mounted with ?q=', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a', 'b'], null)))
+      const wrapper = await mountView('/search?q=cats')
+
+      expect(inputValue(wrapper)).toBe('cats')
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(fetchMock).toHaveBeenCalledWith(firstPage('cats'), SIGNAL)
+      expect(titles(wrapper)).toEqual(['Title a', 'Title b'])
+
+      await wait(500)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not fetch when mounted with a whitespace-only ?q=', async () => {
+      const wrapper = await mountView('/search?q=%20%20')
+      await wait(500)
+
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(titles(wrapper)).toEqual([])
+      expect(wrapper.text()).not.toContain('No results')
+    })
+
+    it('does not fetch when mounted with an empty ?q=', async () => {
+      const wrapper = await mountView('/search?q=')
+      await wait(500)
+
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(inputValue(wrapper)).toBe('')
+    })
+
+    it('does not fetch or set ?q= when mounted without a query', async () => {
+      await mountView('/search')
+      await wait(500)
+
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(routeQuery()).toEqual({})
+    })
+
+    it('sets ?q= to the trimmed query when the debounce fires, and not before', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a'], null)))
+      const wrapper = await mountView()
+
+      await type(wrapper, '  cats  ')
+      await wait(499)
+      expect(routeQuery()).toEqual({})
+
+      await wait(1)
+      expect(routeQuery()).toEqual({ q: 'cats' })
+      expect(router.currentRoute.value.path).toBe('/search')
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('sets ?q= to the trimmed query on Enter and fetches only once', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a'], null)))
+      const wrapper = await mountView()
+
+      await type(wrapper, ' cats ')
+      await press(wrapper, 'Enter')
+
+      expect(routeQuery()).toEqual({ q: 'cats' })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(fetchMock).toHaveBeenCalledWith(firstPage('cats'), SIGNAL)
+      expect(titles(wrapper)).toEqual(['Title a'])
+    })
+
+    it('replaces the history entry instead of pushing a new one', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a'], null)))
+      const wrapper = await mountView('/search', '/')
+
+      await type(wrapper, 'cats')
+      await press(wrapper, 'Enter')
+      await type(wrapper, 'dogs')
+      await wait(500)
+      expect(routeQuery()).toEqual({ q: 'dogs' })
+
+      router.back()
+      await flushPromises()
+
+      expect(router.currentRoute.value.path).toBe('/')
+    })
+
+    it('removes ?q= and clears the results on Enter with an empty input', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a'], null)))
+      const wrapper = await mountView('/search?q=cats')
+      expect(titles(wrapper)).toEqual(['Title a'])
+
+      await type(wrapper, '   ')
+      await press(wrapper, 'Enter')
+
+      expect(routeQuery()).toEqual({})
+      expect(router.currentRoute.value.fullPath).toBe('/search')
+      expect(titles(wrapper)).toEqual([])
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('removes ?q= when the debounce fires with an empty input', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a'], null)))
+      const wrapper = await mountView('/search?q=cats')
+
+      await type(wrapper, '')
+      await wait(500)
+
+      expect(routeQuery()).toEqual({})
+      expect(titles(wrapper)).toEqual([])
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not refetch when Enter repeats the query loaded from the URL', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a'], null)))
+      const wrapper = await mountView('/search?q=cats')
+
+      await press(wrapper, 'Enter')
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(routeQuery()).toEqual({ q: 'cats' })
+      expect(titles(wrapper)).toEqual(['Title a'])
+    })
+
+    it('retries on Enter when the query loaded from the URL failed', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
+      fetchMock.mockResolvedValueOnce(ok(page(['a'], null)))
+      const wrapper = await mountView('/search?q=cats')
+      expect(wrapper.text()).toContain('Failed to load GIFs.')
+
+      await press(wrapper, 'Enter')
+
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(fetchMock).toHaveBeenLastCalledWith(firstPage('cats'), SIGNAL)
+      expect(titles(wrapper)).toEqual(['Title a'])
+    })
+  })
+
+  describe('Escape', () => {
+    it('cancels the pending debounce: no fetch and no ?q=, even after the delay', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a'], null)))
+      const wrapper = await mountView()
+
+      await type(wrapper, 'cats')
+      await wait(200)
+      await press(wrapper, 'Escape')
+      await wait(1000)
+
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(routeQuery()).toEqual({})
+      expect(inputValue(wrapper)).toBe('')
+      expect(titles(wrapper)).toEqual([])
+    })
+
+    it('removes ?q=, clears the input and the results after a search', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a'], null)))
+      const wrapper = await mountView('/search?q=cats')
+      expect(titles(wrapper)).toEqual(['Title a'])
+
+      await press(wrapper, 'Escape')
+
+      expect(routeQuery()).toEqual({})
+      expect(router.currentRoute.value.fullPath).toBe('/search')
+      expect(inputValue(wrapper)).toBe('')
+      expect(titles(wrapper)).toEqual([])
+      expect(wrapper.text()).not.toContain('No results')
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('cancels a pending debounce for a new query typed after a search', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a'], null)))
+      const wrapper = await mountView('/search?q=cats')
+
+      await type(wrapper, 'dogs')
+      await wait(100)
+      await press(wrapper, 'Escape')
+      await wait(1000)
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(routeQuery()).toEqual({})
+      expect(inputValue(wrapper)).toBe('')
+    })
+  })
+
+  describe('external route changes', () => {
+    it('clears the input and the results when navigating to /search without ?q=', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a'], null)))
+      const wrapper = await mountView('/search?q=cats')
+      expect(titles(wrapper)).toEqual(['Title a'])
+
+      await router.push('/search')
+      await flushPromises()
+
+      expect(inputValue(wrapper)).toBe('')
+      expect(titles(wrapper)).toEqual([])
+      expect(wrapper.text()).not.toContain('No results')
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('loads the new query and fills the input when navigating to another ?q=', async () => {
+      fetchMock.mockResolvedValueOnce(ok(page(['a'], null)))
+      fetchMock.mockResolvedValueOnce(ok(page(['d'], null)))
+      const wrapper = await mountView('/search?q=cats')
+
+      await router.push('/search?q=dogs')
+      await flushPromises()
+
+      expect(inputValue(wrapper)).toBe('dogs')
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(fetchMock).toHaveBeenLastCalledWith(firstPage('dogs'), SIGNAL)
+      expect(titles(wrapper)).toEqual(['Title d'])
+    })
+
+    it('cancels a pending debounce when the route changes externally', async () => {
+      fetchMock.mockResolvedValue(ok(page(['d'], null)))
+      const wrapper = await mountView()
+
+      await type(wrapper, 'cats')
+      await router.push('/search?q=dogs')
+      await flushPromises()
+      await wait(1000)
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(fetchMock).toHaveBeenCalledWith(firstPage('dogs'), SIGNAL)
+      expect(routeQuery()).toEqual({ q: 'dogs' })
+      expect(inputValue(wrapper)).toBe('dogs')
     })
   })
 })

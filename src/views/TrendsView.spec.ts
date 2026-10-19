@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import TrendsView from '@/views/TrendsView.vue'
 import SearchView from '@/views/SearchView.vue'
+import { RouteName } from '@/router/names'
 import { fetchGifsFromApi } from '@/services'
 import { deferred, fail, FakeObserver, ok, page, type GifsResult } from '@/test/helpers'
 
@@ -38,6 +40,20 @@ function tryAgain(wrapper: VueWrapper) {
 
 function intersectAll(): void {
   FakeObserver.instances.forEach((o) => o.intersectAll())
+}
+
+/** Mount SearchView with a memory router at `/search` (SearchView reads/writes ?q=) */
+async function mountSearchView(): Promise<VueWrapper> {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/', name: RouteName.Trends, component: { render: () => null } },
+      { path: '/search', name: RouteName.Search, component: SearchView }
+    ]
+  })
+  await router.push('/search')
+  await router.isReady()
+  return mount(SearchView, { global: { plugins: [router] } })
 }
 
 describe('TrendsView', () => {
@@ -147,7 +163,7 @@ describe('TrendsView', () => {
     untrack(trends)
     trends.unmount()
 
-    const search = track(mount(SearchView))
+    const search = track(await mountSearchView())
     await flushPromises()
 
     expect(titles(search)).toEqual([])

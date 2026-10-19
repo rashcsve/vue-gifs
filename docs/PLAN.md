@@ -47,7 +47,7 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - [x] **9.** HTTP layer: return a typed result (`{ ok, data } | { ok: false, error }`) instead of `null`, and abort in-flight requests when the route changes or a new search starts. Needs: 6.
 - [x] **10.** Replace the shared store with a `usePaginatedGifs(category)` composable, or one store per page. No state leaks between pages. Needs: 9.
 - [x] **11.** Component cleanup: `<img loading="lazy" :alt>`, one infinite-scroll sentinel, `RouteName` in `App.vue`, fix Tailwind tokens and classes, drop the `keyOf` cast. Needs: 6, 8b.
-- [ ] **12.** Search: keep the query in the URL (`?q=`), extract a `useDebounce` composable, and make Escape cancel the debounce. Needs: 10.
+- [x] **12.** Search: keep the query in the URL (`?q=`), extract a `useDebounce` composable, and make Escape cancel the debounce. Needs: 10.
 
 ## Phase 4: Interview polish
 
@@ -100,3 +100,6 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - `src/assets/base.css:58`: the `*` rule (`font-weight: normal; position: relative`) is unlayered, so it beats every Tailwind utility (utilities live in `@layer utilities`). `font-semibold`/`font-bold` are no-ops app-wide (nav active link, every `h1`), and the active link colour only works because of `!`. Fix by importing it as `@import './base.css' layer(base);` (or wrapping it in `@layer base`), drop the global `position: relative`, then remove the `!` in `App.vue`. App-wide visual change, so its own step (or 15). Found in 11.
 - `src/composables/usePaginatedGifs.ts`: GIPHY offset pagination can return the same GIF on consecutive pages (trending shifts between requests), giving duplicate `:key="gif.id"` in `GifList` and Vue "Duplicate keys" warnings. Not new (the old `keyOf` also keyed by `id`). De-duplicate by id when appending a page; needs a spec. Found in 11.
 - `src/components/GifList.spec.ts`: the older specs "emits load-more when the last item intersects…" and "does not emit when hasMore turns false before the item intersects" still name the removed per-item design; rename to "sentinel" (user decision). In the view specs, the second `intersectAll()` after a failed load-more is a no-op with `FakeObserver` (nothing observed while paused), so the loop guard is only proven by the `EagerObserver` spec in `GifList.spec.ts`. Found in 11.
+- `src/views/SearchView.vue:54`: `router.replace({ query: q ? { q } : {} })` (and Escape's `{ query: {} }`) replaces the whole query, so any other params (e.g. `utm_*`) are dropped on the first search. Merge with `route.query` and delete `q` when empty; needs a spec. Found in 12.
+- `src/views/SearchView.vue:33`: `routeQuery` trims `?q=` but the URL is never rewritten, so `/search?q=%20cats%20` or `?q=%20` stays as-is after Enter (it counts as "same query"). Also untested: repeated `?q=a&q=b` (takes the first) and value-less `?q`. Found in 12.
+- `src/views/SearchView.spec.ts:30`, `src/views/TrendsView.spec.ts:46`: the memory-router fixture (routes + push + `isReady`) is copied in both specs. Move a `mountWithRouter` helper into `src/test/helpers.ts`. Found in 12.
