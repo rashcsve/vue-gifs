@@ -16,7 +16,19 @@ const tsRules = {
 }
 
 export default [
-  { ignores: ['dist', 'dist-ssr', 'coverage', 'node_modules', '**/*.local'] },
+  {
+    ignores: [
+      'dist',
+      'dist-ssr',
+      'coverage',
+      'node_modules',
+      '**/*.local',
+      'test-results',
+      'dist-e2e',
+      'playwright-report',
+      'blob-report'
+    ]
+  },
   ...vue.configs['flat/recommended'],
   {
     files: ['**/*.vue'],

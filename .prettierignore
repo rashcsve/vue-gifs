@@ -4,5 +4,9 @@ coverage
 public
 package-lock.json
 tsconfig.tsbuildinfo
+test-results
+dist-e2e
+playwright-report
+blob-report
 # Secrets; the agent sandbox also denies reading these
 .env*

@@ -12,7 +12,8 @@ This file is the shared instruction source for every coding agent (Codex reads i
 - `npm run format:check`: run Prettier (`npm run format` rewrites)
 - `npm run build`: production build
 - `npm test`: unit tests (Vitest; `npm run test:watch` for watch mode)
-- `npm run verify`: every gate above in one go; husky `pre-push` and CI (`.github/workflows/ci.yml`) run the same script
+- `npm run test:e2e`: Playwright end-to-end tests in `e2e/` against a `vite preview` of `dist-e2e/` on port 4174, with no GIPHY key (Playwright's headless shell: `npx playwright install chromium-headless-shell` once; `PW_CHANNEL=chrome` uses the installed Google Chrome instead). Not part of `verify`
+- `npm run verify`: every gate above in one go; husky `pre-push` and CI (`.github/workflows/ci.yml`) run the same script; CI also runs `test:e2e` in a separate job
 - `docker compose up --build -V dev`: dev server in Docker on port 5173 (source bind-mounted, HMR; `-V` refreshes `node_modules` after dependency changes)
 - `docker compose up --build preview`: production build served on port 4173 (reads `GIPHY_API_KEY` from `.env.local` at runtime via `env_file`)
 
@@ -20,7 +21,7 @@ This file is the shared instruction source for every coding agent (Codex reads i
 
 - Vue 3 `<script setup lang="ts">`, composables in `src/composables/` for per-page state (Pinia setup stores only for state shared across pages), Tailwind v4 utility classes, `@/` imports.
 - No `any` and no unneeded casts.
-- Tests sit next to their source as `*.spec.ts` (Vitest, `@vue/test-utils`, jsdom). Never call the real GIPHY API in tests.
+- Tests sit next to their source as `*.spec.ts` (Vitest, `@vue/test-utils`, jsdom). End-to-end specs live in `e2e/*.spec.ts` and mock `/api/gifs` with `page.route`. Never call the real GIPHY API in tests.
 - Tests change only when expected behaviour changes, and the user decides that. Never delete, skip or loosen an assertion to go green.
 - Prettier owns formatting (`.prettierrc.json`); don't hand-format against it.
 - Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`, `test:`, `docs:`, `style:`), enforced by commitlint in the husky `commit-msg` hook.

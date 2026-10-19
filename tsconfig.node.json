@@ -1,9 +1,9 @@
 {
-  "//": "Server-side and build code (Netlify functions, Vite config). The app uses tsconfig.json.",
+  "//": "Server-side and build code (Netlify functions, Vite and Playwright config, e2e specs). The app uses tsconfig.json.",
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["netlify", "vite.config.ts"]
+  "include": ["netlify", "vite.config.ts", "playwright.config.ts", "e2e"]
 }

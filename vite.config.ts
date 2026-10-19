@@ -2,6 +2,7 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, loadEnv, type Connect, type Plugin } from 'vite'
+import { configDefaults } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { config as gifsFunction, handleGifs } from './netlify/functions/gifs/gifs'
 
@@ -67,6 +68,8 @@ export default defineConfig(({ mode }) => ({
     target: 'es2022'
   },
   test: {
-    environment: 'jsdom'
+    environment: 'jsdom',
+    // Playwright runs e2e/ (npm run test:e2e)
+    exclude: [...configDefaults.exclude, 'e2e/**']
   }
 }))
