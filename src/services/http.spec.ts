@@ -1,11 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getJson } from '@/services/http'
+import { jsonResponse } from '@/test/helpers'
 
 const URL_ = 'https://example.test/data'
-
-function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Response {
-  return new Response(JSON.stringify(body), init)
-}
 
 describe('getJson', () => {
   const fetchMock = vi.fn<typeof fetch>()

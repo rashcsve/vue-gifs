@@ -3,6 +3,7 @@ import { API_BASE, DEFAULT_LANG, DEFAULT_LIMIT, DEFAULT_RATING } from '@/config/
 import { buildUrl, fetchGifsFromApi, normalize } from '@/services/giphy'
 import type { GiphyGif, GiphyResponse } from '@/services/types'
 import type * as ApiConfig from '@/config/api'
+import { jsonResponse } from '@/test/helpers'
 
 const apiConfig = vi.hoisted(() => ({ key: 'test-key' }))
 
@@ -159,10 +160,6 @@ describe('normalize', () => {
 
 describe('fetchGifsFromApi', () => {
   const fetchMock = vi.fn<typeof fetch>()
-
-  function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Response {
-    return new Response(JSON.stringify(body), init)
-  }
 
   function calledUrl(): URL {
     const input = fetchMock.mock.calls[0]?.[0]
