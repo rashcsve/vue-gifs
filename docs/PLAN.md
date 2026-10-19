@@ -54,7 +54,7 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - [x] **13.** Move the API key behind a serverless proxy (Netlify or Vercel function). Remove it from the client env. No blockers: do it early, since every build (including `dist/`) inlines the key today.
 - [x] **14.** Add Playwright end-to-end tests for trends loading, search and infinite scroll. Needs: 8b, 12.
 - [x] **15.** Accessibility pass (focus states, alt text, live regions) and a Lighthouse check. Needs: 11.
-- [ ] **16.** Rewrite the README: architecture diagram, decisions and trade-offs, how AI tools were used (Claude Code + Codex setup from `AGENTS.md`), demo link. Needs: 17.
+- [x] **16.** Rewrite the README: architecture diagram, decisions and trade-offs, how AI tools were used (Claude Code + Codex setup from `AGENTS.md`), demo link. Needs: 17.
 - [x] **17.** Deploy, with a preview link for each PR. Needs: 7, 13.
 
 ## Found issues
@@ -119,3 +119,4 @@ Steps can run in any order once their `Needs:` steps are ticked; steps with no `
 - `src/App.vue`: route changes don't move focus or announce the new page, so screen-reader users get no cue after clicking a nav link. Focus the view's `h1` (already `tabindex="-1"`) in `router.afterEach`, except on the first load and on Search (which focuses its input). Found in 15.
 - `src/components/LoadError.vue`: `busy` (disables **Try again**) is never true while the error shows, since `retry()` clears `error` before loading starts. Remove it, or keep the error visible while retrying. Found in 15.
 - Lighthouse (accessibility, light mode, preview build): 96 before the fixes, failing only on the faded "Powered by GIPHY" footer. Fixed in 15 with `--color-text-muted`; the active nav green (≈2.5:1, not flagged by Lighthouse) now uses `--color-accent`. Re-run after merge to record the final score. A saved `*.report.html` in the repo root is picked up by `prettier --write .`; add `*.report.html` to `.gitignore` and `.prettierignore`. Found in 15.
+- `README.md:7`: the Trends/Search screenshots are from 2022 (pre-Tailwind UI) and were kept in the rewrite. Replace them with current ones (e.g. from the deploy); the agent sandbox can't run the app with a GIPHY key. Found in 16.
