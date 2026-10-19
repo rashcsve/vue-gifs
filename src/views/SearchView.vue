@@ -5,6 +5,8 @@ import { useDebounce } from '@/composables/useDebounce'
 import { usePaginatedGifs } from '@/composables/usePaginatedGifs'
 import { RouteName } from '@/router/names'
 import GifList from '@/components/GifList.vue'
+import GifStatus from '@/components/GifStatus.vue'
+import LoadError from '@/components/LoadError.vue'
 
 // STATE (cancelled automatically when the view unmounts)
 const {
@@ -27,6 +29,8 @@ const router = useRouter()
 // REFS
 const searchQuery = ref<string>('')
 const inputEl = ref<HTMLInputElement | null>(null)
+const headingEl = ref<HTMLElement | null>(null)
+const listRef = ref<InstanceType<typeof GifList> | null>(null)
 
 // Trimmed ?q= ('' when absent); null once the route has left this page
 const routeQuery = computed<string | null>(() => {
@@ -55,6 +59,16 @@ const search = () => {
 }
 
 const debounce = useDebounce(search, 500)
+
+/**
+ * Retry, moving focus first: the retry removes the focused "Try again" button,
+ * which would drop focus to <body>. A load-more error focuses the list, a first-page error the heading.
+ */
+const onRetry = () => {
+  if (gifs.value.length) listRef.value?.focus()
+  else headingEl.value?.focus()
+  void retry()
+}
 
 /**
  * - Enter triggers search immediately (skips debounce)
@@ -95,7 +109,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <h1 class="text-2xl font-semibold mb-4">Search GIFs</h1>
+  <h1 ref="headingEl" tabindex="-1" class="text-2xl font-semibold mb-4 outline-none">
+    Search GIFs
+  </h1>
 
   <div class="input-wrapper">
     <input
@@ -112,24 +128,30 @@ onMounted(() => {
     />
   </div>
 
-  <div class="sr-only" aria-live="polite">
-    <span v-if="isLoading || isLoadingMore">Loading…</span>
-    <span v-else-if="error">{{ error }}</span>
-    <span v-else-if="isEmpty">No results for "{{ query }}"</span>
-  </div>
+  <GifStatus
+    :is-loading="isLoading"
+    :is-loading-more="isLoadingMore"
+    :error="error"
+    :is-empty="isEmpty"
+    :count="gifs.length"
+    :empty-message="`No results for “${query}”`"
+  />
 
-  <p v-if="error" class="mt-3 text-red-600">
-    {{ error }}
-    <button class="underline ml-2" :disabled="isLoading || isLoadingMore" @click="retry">
-      Try again
-    </button>
-  </p>
+  <!-- A first-page error shows above the list, a load-more error below it (next to where the user is) -->
+  <LoadError
+    v-if="error && !gifs.length"
+    class="mt-3"
+    :message="error"
+    :busy="isLoading || isLoadingMore"
+    @retry="onRetry"
+  />
 
-  <p v-else-if="isEmpty" class="mt-3 opacity-70">
+  <p v-else-if="isEmpty" class="mt-3 text-(--color-text-muted)">
     No results for “{{ query }}”. Try a different keyword.
   </p>
 
   <GifList
+    ref="listRef"
     class="mt-4"
     :gifs="gifs"
     :is-loading="isLoading"
@@ -137,5 +159,13 @@ onMounted(() => {
     :has-more="hasMore"
     :paused="!!error"
     @load-more="loadMore"
+  />
+
+  <LoadError
+    v-if="error && gifs.length"
+    class="mt-3 text-center"
+    :message="error"
+    :busy="isLoading || isLoadingMore"
+    @retry="onRetry"
   />
 </template>

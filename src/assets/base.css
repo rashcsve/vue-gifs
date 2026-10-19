@@ -32,6 +32,13 @@
 
   --color-heading: var(--vt-c-text-light-1);
   --color-text: var(--vt-c-text-light-1);
+  /* Secondary text, AA on the background (≈ 6.4:1); use instead of fading with opacity */
+  --color-text-muted: #57606a;
+  /* Active nav link: AA on white (≈ 5:1); the brand hsl(160,100%,37%) is only ≈ 2.5:1 */
+  --color-accent: hsl(160, 100%, 25%);
+
+  /* Focus ring: at least 3:1 against the background (blue-600 on white ≈ 5.2:1) */
+  --color-focus: #2563eb;
 
   --section-gap: 160px;
 }
@@ -47,6 +54,13 @@
 
     --color-heading: var(--vt-c-text-dark-1);
     --color-text: var(--vt-c-text-dark-2);
+    /* ≈ 6.1:1 on #181818 */
+    --color-text-muted: #9198a1;
+    /* ≈ 7:1 on #181818 */
+    --color-accent: hsl(160, 100%, 37%);
+
+    /* blue-400 on #181818 ≈ 7:1 */
+    --color-focus: #60a5fa;
   }
 }
 
@@ -54,7 +68,6 @@
 *::before,
 *::after {
   box-sizing: border-box;
-  position: relative;
   font-weight: normal;
 }
 

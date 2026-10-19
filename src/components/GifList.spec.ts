@@ -123,6 +123,49 @@ describe('GifList', () => {
     })
   })
 
+  describe('list semantics', () => {
+    it('renders the GIFs as a ul[role="list"] with one li per gif containing its img', () => {
+      const wrapper = mountList({ gifs: gifs('a', 'b', 'c'), hasMore: true })
+      const lists = wrapper.findAll('ul')
+      expect(lists).toHaveLength(1)
+      const list = lists[0]
+      expect(list?.attributes('role')).toBe('list')
+
+      const children = [...(list?.element.children ?? [])]
+      expect(children.map((el) => el.tagName)).toEqual(['LI', 'LI', 'LI'])
+      expect(children.map((li) => li.querySelector('img')?.getAttribute('alt'))).toEqual([
+        'Title a',
+        'Title b',
+        'Title c'
+      ])
+    })
+
+    it('sets aria-busy="true" on the list while a later page loads', () => {
+      const wrapper = mountList({ gifs: gifs('a'), isLoadingMore: true, hasMore: true })
+      expect(wrapper.get('ul').attributes('aria-busy')).toBe('true')
+    })
+
+    it('does not set aria-busy="true" on the list when idle', async () => {
+      const wrapper = mountList({ gifs: gifs('a'), isLoadingMore: true, hasMore: true })
+      await wrapper.setProps({ isLoadingMore: false, gifs: gifs('a', 'b') })
+      expect(wrapper.get('ul').attributes('aria-busy')).not.toBe('true')
+    })
+
+    it('keeps the sentinel and "Loading more…" outside the list', async () => {
+      const wrapper = await mountLoaded({ gifs: gifs('a', 'b'), hasMore: true })
+      const [sentinel] = observedElements()
+      expect(sentinel).toBeDefined()
+      await wrapper.setProps({ isLoadingMore: true })
+
+      const list = wrapper.get('ul').element
+      expect([...list.children].every((el) => el.tagName === 'LI')).toBe(true)
+      expect(sentinel && list.contains(sentinel)).toBe(false)
+      expect(list.textContent).not.toContain('Loading more…')
+      expect(wrapper.text()).toContain('Loading more…')
+      wrapper.unmount()
+    })
+  })
+
   describe('load more', () => {
     it('emits load-more when the last item intersects and more pages exist', async () => {
       const wrapper = await mountLoaded({ gifs: gifs('a', 'b'), hasMore: true })

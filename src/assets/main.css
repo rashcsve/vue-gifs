@@ -1,2 +1,10 @@
 @import './base.css';
 @import 'tailwindcss';
+
+/* Layered, so utilities (e.g. outline-none) can still override it */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}

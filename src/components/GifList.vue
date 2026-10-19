@@ -18,6 +18,7 @@ const emit = defineEmits<{ (e: 'loadMore'): void }>()
 
 // REFS
 const sentinel = ref<HTMLElement | null>(null)
+const list = ref<HTMLElement | null>(null)
 const observer = ref<IntersectionObserver | null>(null)
 
 const canLoadMore = computed(
@@ -62,18 +63,35 @@ onBeforeUnmount(() => {
   observer.value?.disconnect()
   observer.value = null
 })
+
+/**
+ * Move keyboard focus to the list without scrolling (the user is already at the bottom).
+ */
+const focus = () => list.value?.focus({ preventScroll: true })
+
+defineExpose({ focus })
 </script>
 
 <template>
   <p v-if="isLoading" class="mt-4 text-center">Loading…</p>
 
-  <section v-else class="mt-4 flex flex-wrap justify-center md:justify-between">
-    <div v-for="gif in gifs" :key="gif.id">
-      <Gif :gif="gif" />
-    </div>
+  <section v-else class="mt-4">
+    <!-- role="list": Safari drops list semantics when list-style is none -->
+    <!-- tabindex="-1": focus() can move here (e.g. after a retry); no ring, it's not interactive -->
+    <ul
+      ref="list"
+      role="list"
+      tabindex="-1"
+      class="flex flex-wrap justify-center md:justify-between outline-none"
+      :aria-busy="isLoadingMore"
+    >
+      <li v-for="gif in gifs" :key="gif.id">
+        <Gif :gif="gif" />
+      </li>
+    </ul>
 
     <div ref="sentinel" class="w-full h-px" aria-hidden="true" />
 
-    <p v-if="isLoadingMore" class="w-full text-center opacity-70">Loading more…</p>
+    <p v-if="isLoadingMore" class="w-full text-center text-(--color-text-muted)">Loading more…</p>
   </section>
 </template>

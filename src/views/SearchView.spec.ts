@@ -97,6 +97,18 @@ function intersectAll(): void {
   FakeObserver.instances.forEach((o) => o.intersectAll())
 }
 
+/** Text of the screen-reader live region (exactly one is expected) */
+function status(wrapper: VueWrapper): string {
+  const regions = wrapper.findAll('[role="status"]')
+  expect(regions).toHaveLength(1)
+  return regions[0]?.text().trim() ?? ''
+}
+
+/** True when `a` comes before `b` in document order */
+function isBefore(a: Element, b: Element): boolean {
+  return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+}
+
 describe('SearchView', () => {
   beforeEach(() => {
     fetchMock.mockReset()
@@ -607,6 +619,182 @@ describe('SearchView', () => {
       expect(fetchMock).toHaveBeenCalledWith(firstPage('dogs'), SIGNAL)
       expect(routeQuery()).toEqual({ q: 'dogs' })
       expect(inputValue(wrapper)).toBe('dogs')
+    })
+  })
+
+  describe('accessibility', () => {
+    /** Like mountView, but attached to document.body so focus can be checked */
+    async function mountAttached(path: string): Promise<VueWrapper> {
+      router = makeRouter()
+      await router.push(path)
+      await router.isReady()
+      const wrapper = mount(SearchView, { global: { plugins: [router] }, attachTo: document.body })
+      wrappers.push(wrapper)
+      await flushPromises()
+      return wrapper
+    }
+
+    it('clears the status text when Escape clears the results', async () => {
+      fetchMock.mockResolvedValue(ok(page(['a', 'b', 'c'], null)))
+      const wrapper = await mountView()
+      await type(wrapper, 'cats')
+      await press(wrapper, 'Enter')
+      expect(status(wrapper)).toBe('3 GIFs loaded')
+
+      await press(wrapper, 'Escape')
+
+      expect(titles(wrapper)).toEqual([])
+      expect(status(wrapper)).toBe('')
+    })
+
+    describe('focus after "Try again"', () => {
+      it('moves focus to the GIF list after retrying a failed load-more, and keeps it there', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        fetchMock.mockResolvedValueOnce(ok(page(['a', 'b'], '2')))
+        fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
+        const wrapper = await mountAttached('/search?q=cats')
+        intersectAll()
+        await flushPromises()
+
+        const list = wrapper.get('ul')
+        expect(list.attributes('tabindex')).toBe('-1')
+        const button = tryAgain(wrapper)
+        expect(button).toBeDefined()
+        ;(button?.element as HTMLButtonElement).focus()
+        expect(document.activeElement).toBe(button?.element)
+
+        const d = deferred<GifsResult>()
+        fetchMock.mockReturnValueOnce(d.promise)
+        await button?.trigger('click')
+        await flushPromises()
+
+        expect(document.activeElement).not.toBe(document.body)
+        expect(document.activeElement).toBe(wrapper.get('ul').element)
+
+        d.resolve(ok(page(['c'], null)))
+        await flushPromises()
+
+        expect(tryAgain(wrapper)).toBeUndefined()
+        expect(titles(wrapper)).toEqual(['Title a', 'Title b', 'Title c'])
+        expect(document.activeElement).toBe(wrapper.get('ul').element)
+      })
+
+      it('moves focus to the heading after retrying a failed first page, and keeps it there', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
+        const wrapper = await mountAttached('/search?q=cats')
+
+        const heading = wrapper.get('h1')
+        expect(heading.attributes('tabindex')).toBe('-1')
+        const button = tryAgain(wrapper)
+        expect(button).toBeDefined()
+        ;(button?.element as HTMLButtonElement).focus()
+        expect(document.activeElement).toBe(button?.element)
+
+        const d = deferred<GifsResult>()
+        fetchMock.mockReturnValueOnce(d.promise)
+        await button?.trigger('click')
+        await flushPromises()
+
+        expect(document.activeElement).not.toBe(document.body)
+        expect(document.activeElement).toBe(heading.element)
+
+        d.resolve(ok(page(['a'], null)))
+        await flushPromises()
+
+        expect(tryAgain(wrapper)).toBeUndefined()
+        expect(titles(wrapper)).toEqual(['Title a'])
+        expect(document.activeElement).toBe(heading.element)
+      })
+    })
+
+    it('renders exactly one status live region', async () => {
+      const wrapper = await mountView()
+
+      expect(wrapper.findAll('[role="status"]')).toHaveLength(1)
+      expect(wrapper.get('[role="status"]').attributes('aria-live')).toBe('polite')
+    })
+
+    it('announces nothing before any search has run', async () => {
+      const wrapper = await mountView()
+      expect(status(wrapper)).toBe('')
+    })
+
+    it('announces "Loading GIFs…" and then "N GIFs loaded" for the first page', async () => {
+      const d = deferred<GifsResult>()
+      fetchMock.mockReturnValueOnce(d.promise)
+      const wrapper = await mountView()
+      await type(wrapper, 'cats')
+      await press(wrapper, 'Enter')
+      expect(status(wrapper)).toBe('Loading GIFs…')
+
+      d.resolve(ok(page(['a', 'b'], '2')))
+      await flushPromises()
+
+      expect(status(wrapper)).toBe('2 GIFs loaded')
+    })
+
+    it('announces the no-results message with curly quotes in the status region', async () => {
+      fetchMock.mockResolvedValue(ok(page([], null)))
+      const wrapper = await mountView()
+      await type(wrapper, 'zzz')
+      await press(wrapper, 'Enter')
+
+      expect(status(wrapper)).toContain('No results for “zzz”')
+      expect(status(wrapper)).not.toContain('"zzz"')
+    })
+
+    it('announces the error in the status region when the first page fails', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
+      const wrapper = await mountView('/search?q=cats')
+
+      expect(status(wrapper)).toBe('Failed to load GIFs.')
+    })
+
+    it('shows a first-page error above the list area', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
+      const wrapper = await mountView('/search?q=cats')
+
+      const errors = wrapper.findAll('.text-red-600')
+      expect(errors).toHaveLength(1)
+      expect(errors[0]?.text()).toContain('Failed to load GIFs.')
+      const list = wrapper.find('ul')
+      expect(list.exists()).toBe(true)
+      const error = errors[0]
+      expect(error && isBefore(error.element, list.element)).toBe(true)
+    })
+
+    it('shows one load-more error below the GIF list, and "Try again" retries the load-more', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      fetchMock.mockResolvedValueOnce(ok(page(['a', 'b'], '2')))
+      fetchMock.mockResolvedValueOnce(NETWORK_ERROR)
+      const wrapper = await mountView('/search?q=cats')
+
+      intersectAll()
+      await flushPromises()
+
+      const errors = wrapper.findAll('.text-red-600')
+      expect(errors).toHaveLength(1)
+      const error = errors[0]
+      expect(error?.text()).toContain('Failed to load GIFs.')
+      expect(error?.findAll('button').some((b) => b.text() === 'Try again')).toBe(true)
+      const list = wrapper.get('ul')
+      expect(list.findAll('img')).toHaveLength(2)
+      expect(error && isBefore(list.element, error.element)).toBe(true)
+
+      fetchMock.mockResolvedValueOnce(ok(page(['c'], null)))
+      await tryAgain(wrapper)?.trigger('click')
+      await flushPromises()
+
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        { category: 'search', query: 'cats', offset: '2' },
+        SIGNAL
+      )
+      expect(titles(wrapper)).toEqual(['Title a', 'Title b', 'Title c'])
+      expect(wrapper.find('.text-red-600').exists()).toBe(false)
     })
   })
 })
